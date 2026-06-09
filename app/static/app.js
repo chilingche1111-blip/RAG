@@ -11,6 +11,21 @@ const providerCount = document.getElementById("provider-count");
 const providerList = document.getElementById("provider-list");
 const llmStatusSummary = document.getElementById("llm-status-summary");
 const defaultProviderBadge = document.getElementById("default-provider-badge");
+const crawlSourceSelect = document.getElementById("crawl-source");
+const crawlLimitInput = document.getElementById("crawl-limit");
+const rebuildTopicSelect = document.getElementById("rebuild-topic");
+const crawlButton = document.getElementById("crawl-button");
+const rebuildButton = document.getElementById("rebuild-button");
+const evalButton = document.getElementById("eval-button");
+const opsStatus = document.getElementById("ops-status");
+const indexStatList = document.getElementById("index-stat-list");
+const opsRefreshLabel = document.getElementById("ops-refresh-label");
+const evalRunLabel = document.getElementById("eval-run-label");
+const evalSummaryList = document.getElementById("eval-summary-list");
+const evalFailureList = document.getElementById("eval-failure-list");
+const sourceStatusList = document.getElementById("source-status-list");
+const sourceCountLabel = document.getElementById("source-count-label");
+const recentLogList = document.getElementById("recent-log-list");
 const statusLabel = document.getElementById("status-label");
 const emptyState = document.getElementById("empty-state");
 const result = document.getElementById("result");
@@ -72,6 +87,36 @@ async function parseResponse(response) {
   return payload;
 }
 
+function setOpsStatus(message, tone = "soft") {
+  opsStatus.textContent = message;
+  opsStatus.dataset.tone = tone;
+}
+
+function formatTimestamp(value) {
+  if (!value) {
+    return "未记录";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString("zh-CN", { hour12: false });
+}
+
+function renderMetricCards(target, items) {
+  target.innerHTML = "";
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "metric-card";
+    card.innerHTML = `
+      <span>${escapeHtml(item.label)}</span>
+      <strong>${escapeHtml(item.value)}</strong>
+      <p>${escapeHtml(item.note || "")}</p>
+    `;
+    target.appendChild(card);
+  });
+}
+
 async function fetchTopics() {
   const response = await fetch("/api/v1/topics");
   const topics = await parseResponse(response);
@@ -79,6 +124,7 @@ async function fetchTopics() {
   topicCount.textContent = `${topics.length} 个主题`;
   topicList.innerHTML = "";
   topicSelect.innerHTML = '<option value="">全部</option>';
+  rebuildTopicSelect.innerHTML = '<option value="">全部 Topic</option>';
 
   topics.forEach((topic) => {
     const card = document.createElement("article");
@@ -105,6 +151,11 @@ async function fetchTopics() {
     option.value = topic.id;
     option.textContent = topic.label;
     topicSelect.appendChild(option);
+
+    const rebuildOption = document.createElement("option");
+    rebuildOption.value = topic.id;
+    rebuildOption.textContent = topic.label;
+    rebuildTopicSelect.appendChild(rebuildOption);
   });
 }
 
@@ -191,6 +242,216 @@ async function fetchLLMOptions() {
   });
 
   syncProviderSelectionUI();
+}
+
+async function fetchIndexStats() {
+  const response = await fetch("/api/v1/index/stats");
+  const stats = await parseResponse(response);
+  opsRefreshLabel.textContent = `更新于 ${formatTimestamp(stats.last_rebuild_at)}`;
+  renderMetricCards(indexStatList, [
+    {
+      label: "知识文档",
+      value: `${stats.document_count}`,
+      note: `覆盖 ${stats.topic_count} 个 topic`,
+    },
+    {
+      label: "Chunk 数",
+      value: `${stats.chunk_count}`,
+      note: stats.retrieval_backend,
+    },
+    {
+      label: "Rerank",
+      value: stats.reranker_backend,
+      note: `生成层 ${stats.generation_backend}`,
+    },
+    {
+      label: "查询日志",
+      value: `${stats.query_log_size}`,
+      note: "最近请求滚动窗口",
+    },
+  ]);
+}
+
+async function fetchDocSources() {
+  const response = await fetch("/api/v1/docs/sources");
+  const sources = await parseResponse(response);
+  sourceCountLabel.textContent = `${sources.length} 个来源`;
+  crawlSourceSelect.innerHTML = '<option value="all">全部来源</option>';
+  sourceStatusList.innerHTML = "";
+
+  sources.forEach((source) => {
+    const option = document.createElement("option");
+    option.value = source.source_id;
+    option.textContent = `${source.label} · ${source.topic}`;
+    crawlSourceSelect.appendChild(option);
+
+    const card = document.createElement("article");
+    card.className = "source-status-card";
+    card.innerHTML = `
+      <div class="source-status-top">
+        <strong>${escapeHtml(source.label)}</strong>
+        <span class="provider-flag">${escapeHtml(source.topic)}</span>
+      </div>
+      <p>${escapeHtml(source.description)}</p>
+      <div class="provider-meta">
+        <span>max_pages ${source.max_pages}</span>
+        <span>${source.allow_domains.join(", ")}</span>
+      </div>
+      <div class="provider-meta provider-meta-soft">
+        <span>indexed ${source.indexed_document_count}</span>
+        <span>crawled ${source.crawled_document_count}</span>
+      </div>
+      <div class="provider-note">last crawl: ${escapeHtml(formatTimestamp(source.last_crawled_at))}</div>
+    `;
+    sourceStatusList.appendChild(card);
+  });
+}
+
+async function fetchRecentLogs() {
+  const response = await fetch("/api/v1/admin/logs?limit=12");
+  const logs = await parseResponse(response);
+  recentLogList.innerHTML = "";
+  if (!logs.length) {
+    recentLogList.innerHTML = '<p class="empty-inline">暂无查询日志。</p>';
+    return;
+  }
+  logs.forEach((log) => {
+    const row = document.createElement("article");
+    row.className = "compact-item";
+    row.innerHTML = `
+      <div class="compact-item-top">
+        <strong>${escapeHtml(log.question)}</strong>
+        <span>${escapeHtml(formatTimestamp(log.timestamp))}</span>
+      </div>
+      <p>${escapeHtml(log.topic)} · ${escapeHtml(log.answer_backend)} · ${escapeHtml(log.confidence_label)}</p>
+      <div class="provider-note">top chunks: ${escapeHtml(log.top_chunk_ids || "无")}</div>
+    `;
+    recentLogList.appendChild(row);
+  });
+}
+
+function renderEvalSummary(report) {
+  evalRunLabel.textContent = `${report.passed_cases}/${report.total_cases} 通过`;
+  renderMetricCards(evalSummaryList, [
+    {
+      label: "Pass Rate",
+      value: `${Math.round(report.overall_pass_rate * 100)}%`,
+      note: "整体通过率",
+    },
+    {
+      label: "Retrieval Hit",
+      value: `${Math.round(report.retrieval_hit_rate * 100)}%`,
+      note: "命中预期 chunk",
+    },
+    {
+      label: "Citation Hit",
+      value: `${Math.round(report.citation_hit_rate * 100)}%`,
+      note: "答案引用命中",
+    },
+    {
+      label: "Term Coverage",
+      value: `${Math.round(report.answer_term_coverage * 100)}%`,
+      note: "关键术语覆盖率",
+    },
+  ]);
+  evalFailureList.innerHTML = "";
+  const failed = report.results.filter((item) => !item.passed).slice(0, 5);
+  if (!failed.length) {
+    evalFailureList.innerHTML = '<p class="empty-inline">当前运行未发现失败样例。</p>';
+    return;
+  }
+  failed.forEach((item) => {
+    const row = document.createElement("article");
+    row.className = "compact-item";
+    row.innerHTML = `
+      <div class="compact-item-top">
+        <strong>${escapeHtml(item.case_id)}</strong>
+        <span>${escapeHtml(item.topic)}</span>
+      </div>
+      <p>${escapeHtml(item.question)}</p>
+      <div class="provider-note">
+        retrieval=${item.retrieval_hit} · citation=${item.citation_hit} · term=${item.answer_term_coverage}
+      </div>
+    `;
+    evalFailureList.appendChild(row);
+  });
+}
+
+async function runCrawl() {
+  setOpsStatus("抓取中", "busy");
+  const payload = {
+    source_id: crawlSourceSelect.value || "all",
+    incremental: true,
+    rebuild_after: true,
+  };
+  const limit = Number.parseInt(crawlLimitInput.value, 10);
+  if (!Number.isNaN(limit) && limit > 0) {
+    payload.limit = limit;
+  }
+  try {
+    const response = await fetch("/api/v1/docs/crawl", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await parseResponse(response);
+    const totalCreated = data.reports.reduce((sum, item) => sum + item.created_count, 0);
+    const totalUpdated = data.reports.reduce((sum, item) => sum + item.updated_count, 0);
+    setOpsStatus(
+      `抓取完成：新增 ${totalCreated}，更新 ${totalUpdated}，重建 topic ${data.rebuilt_topics.join(", ") || "无"}`,
+      "success",
+    );
+    await refreshOperatorData();
+  } catch (error) {
+    setOpsStatus(error.message || "抓取失败", "error");
+  }
+}
+
+async function runRebuild() {
+  setOpsStatus("重建中", "busy");
+  const topics = rebuildTopicSelect.value ? [rebuildTopicSelect.value] : [];
+  try {
+    const response = await fetch("/api/v1/index/rebuild", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ topics }),
+    });
+    const data = await parseResponse(response);
+    setOpsStatus(
+      `重建完成：${data.document_count} docs / ${data.chunk_count} chunks`,
+      "success",
+    );
+    await refreshOperatorData();
+  } catch (error) {
+    setOpsStatus(error.message || "重建失败", "error");
+  }
+}
+
+async function runEvaluation() {
+  setOpsStatus("评测运行中", "busy");
+  const payload = { top_k: 4 };
+  if (rebuildTopicSelect.value) {
+    payload.topic = rebuildTopicSelect.value;
+  }
+  try {
+    const response = await fetch("/api/v1/evaluation/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await parseResponse(response);
+    renderEvalSummary(data);
+    setOpsStatus(
+      `评测完成：通过 ${data.passed_cases}/${data.total_cases}`,
+      "success",
+    );
+  } catch (error) {
+    setOpsStatus(error.message || "评测失败", "error");
+  }
+}
+
+async function refreshOperatorData() {
+  await Promise.all([fetchIndexStats(), fetchDocSources(), fetchRecentLogs()]);
 }
 
 async function loadSuggestions(topic = "") {
@@ -312,7 +573,11 @@ llmProviderSelect.addEventListener("change", () => {
   syncProviderSelectionUI();
 });
 queryForm.addEventListener("submit", runQuery);
+crawlButton.addEventListener("click", runCrawl);
+rebuildButton.addEventListener("click", runRebuild);
+evalButton.addEventListener("click", runEvaluation);
 
 fetchTopics();
 fetchLLMOptions();
 loadSuggestions();
+refreshOperatorData();

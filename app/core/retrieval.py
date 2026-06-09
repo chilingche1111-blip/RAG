@@ -34,13 +34,29 @@ class HybridRetriever:
         self._index: list[IndexedChunk] = []
 
     def build(self, chunks: Iterable[Chunk]) -> None:
-        chunk_list = list(chunks)
+        self._index = self._index_chunks(list(chunks))
+
+    def replace_topic_chunks(self, topic_chunks: dict[str, list[Chunk]]) -> None:
+        if not topic_chunks:
+            return
+        normalized_topics = {topic.lower() for topic in topic_chunks}
+        remaining = [
+            item
+            for item in self._index
+            if item.chunk.metadata.get("topic", "general").lower() not in normalized_topics
+        ]
+        replacement_chunks: list[Chunk] = []
+        for topic in sorted(topic_chunks):
+            replacement_chunks.extend(topic_chunks[topic])
+        self._index = remaining + self._index_chunks(replacement_chunks)
+
+    def _index_chunks(self, chunk_list: list[Chunk]) -> list[IndexedChunk]:
         dense_vectors = self._encode_dense_vectors(chunk_list)
-        self._index = []
+        indexed: list[IndexedChunk] = []
         for index, chunk in enumerate(chunk_list):
             lexical_terms = extract_lexical_terms(chunk.text)
             semantic_terms = extract_semantic_terms(chunk.text)
-            self._index.append(
+            indexed.append(
                 IndexedChunk(
                     chunk=chunk,
                     lexical_terms=lexical_terms,
@@ -50,6 +66,7 @@ class HybridRetriever:
                     dense_embedding=dense_vectors[index] if dense_vectors else None,
                 )
             )
+        return indexed
 
     def search(
         self,

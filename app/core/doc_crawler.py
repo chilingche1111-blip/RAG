@@ -4,6 +4,8 @@ import json
 import re
 from collections import deque
 from dataclasses import dataclass
+from datetime import datetime, timezone
+from hashlib import sha256
 from pathlib import Path
 from typing import Iterable
 from urllib.parse import urljoin, urlparse, urldefrag
@@ -31,12 +33,37 @@ class DocSource:
 
 @dataclass(frozen=True)
 class CrawledDocument:
+    source_id: str
     topic: str
     source_name: str
     source_url: str
     title: str
     markdown: str
     file_name: str
+
+
+@dataclass(frozen=True)
+class CrawlOutcome:
+    source_id: str
+    topic: str
+    source_url: str
+    file_name: str
+    output_path: str
+    action: str
+    title: str
+
+
+@dataclass(frozen=True)
+class CrawlReport:
+    source_id: str
+    topic: str
+    source_name: str
+    created_count: int
+    updated_count: int
+    skipped_count: int
+    error_count: int
+    outcomes: list[CrawlOutcome]
+    errors: list[str]
 
 
 def load_doc_sources(config_path: str | Path) -> list[DocSource]:
@@ -83,15 +110,46 @@ class OfficialDocsCrawler:
         source: DocSource,
         output_root: str | Path,
         page_limit: int | None = None,
+        incremental: bool = True,
     ) -> list[CrawledDocument]:
+        report = self.crawl_source_report(
+            source,
+            output_root,
+            page_limit=page_limit,
+            incremental=incremental,
+        )
+        return [
+            CrawledDocument(
+                source_id=outcome.source_id,
+                topic=outcome.topic,
+                source_name=report.source_name,
+                source_url=outcome.source_url,
+                title=outcome.title,
+                markdown=(Path(outcome.output_path).read_text(encoding="utf-8")),
+                file_name=outcome.file_name,
+            )
+            for outcome in report.outcomes
+            if outcome.action != "error"
+        ]
+
+    def crawl_source_report(
+        self,
+        source: DocSource,
+        output_root: str | Path,
+        page_limit: int | None = None,
+        incremental: bool = True,
+    ) -> CrawlReport:
         output_root = Path(output_root)
         visited: set[str] = set()
         queue = deque(normalize_url(url) for url in source.start_urls)
         queued: set[str] = set(queue)
-        documents: list[CrawledDocument] = []
         limit = page_limit or source.max_pages
+        manifest = load_crawl_manifest(output_root)
+        outcomes: list[CrawlOutcome] = []
+        errors: list[str] = []
+        counts = {"created": 0, "updated": 0, "skipped": 0}
 
-        while queue and len(documents) < limit:
+        while queue and (counts["created"] + counts["updated"] + counts["skipped"]) < limit:
             current_url = queue.popleft()
             canonical_url = normalize_url(current_url)
             queued.discard(canonical_url)
@@ -99,13 +157,19 @@ class OfficialDocsCrawler:
                 continue
             visited.add(canonical_url)
 
-            response = self.client.get(canonical_url)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.text, "html.parser")
-            title, markdown = extract_markdown_from_html(soup, canonical_url)
+            try:
+                response = self.client.get(canonical_url)
+                response.raise_for_status()
+                soup = BeautifulSoup(response.text, "html.parser")
+                title, markdown = extract_markdown_from_html(soup, canonical_url)
+            except Exception as exc:
+                errors.append(f"{canonical_url}: {exc}")
+                continue
+
             if markdown.strip():
                 file_name = slugify_url(canonical_url) + ".md"
                 document = CrawledDocument(
+                    source_id=source.source_id,
                     topic=source.topic,
                     source_name=source.label,
                     source_url=canonical_url,
@@ -113,8 +177,24 @@ class OfficialDocsCrawler:
                     markdown=markdown,
                     file_name=file_name,
                 )
-                documents.append(document)
-                self._write_document(output_root, document)
+                action, output_path = self._write_document(
+                    output_root,
+                    document,
+                    manifest=manifest,
+                    incremental=incremental,
+                )
+                counts[action] += 1
+                outcomes.append(
+                    CrawlOutcome(
+                        source_id=source.source_id,
+                        topic=source.topic,
+                        source_url=canonical_url,
+                        file_name=file_name,
+                        output_path=str(output_path),
+                        action=action,
+                        title=title,
+                    )
+                )
 
             for link in extract_links(soup, canonical_url):
                 normalized_link = normalize_url(link)
@@ -125,14 +205,60 @@ class OfficialDocsCrawler:
                 queue.append(normalized_link)
                 queued.add(normalized_link)
 
-        return documents
+        save_crawl_manifest(output_root, manifest)
+        return CrawlReport(
+            source_id=source.source_id,
+            topic=source.topic,
+            source_name=source.label,
+            created_count=counts["created"],
+            updated_count=counts["updated"],
+            skipped_count=counts["skipped"],
+            error_count=len(errors),
+            outcomes=outcomes,
+            errors=errors,
+        )
 
-    def _write_document(self, output_root: Path, document: CrawledDocument) -> None:
+    def _write_document(
+        self,
+        output_root: Path,
+        document: CrawledDocument,
+        manifest: dict[str, dict[str, str]],
+        incremental: bool,
+    ) -> tuple[str, Path]:
         topic_dir = output_root / document.topic
         topic_dir.mkdir(parents=True, exist_ok=True)
-        frontmatter = "\n".join(
+        rendered = render_crawled_document(document)
+        output_path = topic_dir / document.file_name
+        content_sha = sha256(rendered.encode("utf-8")).hexdigest()
+        manifest_key = document.source_url
+        existing = manifest.get(manifest_key, {})
+        action = "updated" if output_path.exists() else "created"
+        if (
+            incremental
+            and existing.get("content_sha256") == content_sha
+            and output_path.exists()
+        ):
+            action = "skipped"
+        else:
+            output_path.write_text(rendered, encoding="utf-8")
+
+        manifest[manifest_key] = {
+            "source_id": document.source_id,
+            "topic": document.topic,
+            "file_name": document.file_name,
+            "output_path": str(output_path),
+            "title": document.title,
+            "content_sha256": content_sha,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        return action, output_path
+
+
+def render_crawled_document(document: CrawledDocument) -> str:
+    frontmatter = "\n".join(
             [
                 "---",
+                f"source_id: {document.source_id}",
                 f"topic: {document.topic}",
                 f"source_name: {document.source_name}",
                 f"source_url: {document.source_url}",
@@ -140,10 +266,32 @@ class OfficialDocsCrawler:
                 "",
             ]
         )
-        (topic_dir / document.file_name).write_text(
-            frontmatter + document.markdown.strip() + "\n",
-            encoding="utf-8",
-        )
+    return frontmatter + document.markdown.strip() + "\n"
+
+
+def load_crawl_manifest(output_root: str | Path) -> dict[str, dict[str, str]]:
+    manifest_path = Path(output_root) / ".crawl_manifest.json"
+    if not manifest_path.exists():
+        return {}
+    try:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    if not isinstance(payload, dict):
+        return {}
+    return {
+        str(key): value
+        for key, value in payload.items()
+        if isinstance(key, str) and isinstance(value, dict)
+    }
+
+
+def save_crawl_manifest(output_root: str | Path, manifest: dict[str, dict[str, str]]) -> None:
+    manifest_path = Path(output_root) / ".crawl_manifest.json"
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
 
 
 def extract_markdown_from_html(soup: BeautifulSoup, url: str) -> tuple[str, str]:

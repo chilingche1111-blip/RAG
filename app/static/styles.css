@@ -360,6 +360,23 @@ textarea {
   border: 1px solid rgba(15, 118, 110, 0.12);
 }
 
+.ops-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.field-actions-stack {
+  justify-content: stretch;
+}
+
+.button-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .command-stack {
   display: flex;
   flex-direction: column;
@@ -381,6 +398,105 @@ textarea {
   border-radius: 8px;
   background: rgba(15, 23, 38, 0.06);
   font-family: "IBM Plex Mono", monospace;
+}
+
+.ops-status {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(15, 23, 38, 0.06);
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.ops-status[data-tone="busy"] {
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent-deep);
+}
+
+.ops-status[data-tone="success"] {
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--accent-deep);
+}
+
+.ops-status[data-tone="error"] {
+  background: rgba(180, 83, 9, 0.12);
+  color: #9a3412;
+}
+
+.ops-workspace {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.ops-panel {
+  min-height: 280px;
+}
+
+.ops-panel-wide {
+  grid-column: span 2;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.metric-grid-compact {
+  margin-bottom: 8px;
+}
+
+.metric-card,
+.source-status-card,
+.compact-item {
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(15, 23, 38, 0.08);
+}
+
+.metric-card span {
+  display: block;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.metric-card strong {
+  display: block;
+  font-size: 1.25rem;
+  margin-bottom: 8px;
+}
+
+.metric-card p,
+.source-status-card p,
+.compact-item p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.source-status-list,
+.compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.source-status-top,
+.compact-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.empty-inline {
+  margin: 0;
+  color: var(--muted);
 }
 
 .primary-btn,
@@ -581,6 +697,16 @@ textarea {
 
   .provider-list {
     grid-template-columns: 1fr;
+  }
+
+  .ops-workspace,
+  .metric-grid,
+  .ops-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-panel-wide {
+    grid-column: span 1;
   }
 }
 

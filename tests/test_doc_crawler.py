@@ -8,9 +8,13 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 
 from app.core.doc_crawler import (
+    CrawledDocument,
     extract_markdown_from_html,
+    load_crawl_manifest,
     load_doc_sources,
     normalize_url,
+    render_crawled_document,
+    save_crawl_manifest,
     slugify_url,
 )
 
@@ -64,6 +68,35 @@ class DocCrawlerTest(unittest.TestCase):
     def test_normalize_url_removes_fragment_and_trailing_slash(self) -> None:
         normalized = normalize_url("https://example.com/docs/page/#section")
         self.assertEqual(normalized, "https://example.com/docs/page")
+
+    def test_render_document_and_manifest_roundtrip(self) -> None:
+        document = CrawledDocument(
+            source_id="sample",
+            topic="sample-topic",
+            source_name="Sample Docs",
+            source_url="https://example.com/docs/sample",
+            title="Sample Doc",
+            markdown="# Sample Doc\n\nBody",
+            file_name="sample.md",
+        )
+        rendered = render_crawled_document(document)
+        self.assertIn("source_id: sample", rendered)
+
+        manifest = {
+            document.source_url: {
+                "source_id": document.source_id,
+                "topic": document.topic,
+                "file_name": document.file_name,
+                "output_path": "data/knowledge_base/sample-topic/sample.md",
+                "title": document.title,
+                "content_sha256": "abc123",
+                "updated_at": "2026-01-01T00:00:00+00:00",
+            }
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            save_crawl_manifest(temp_dir, manifest)
+            loaded = load_crawl_manifest(temp_dir)
+        self.assertEqual(loaded[document.source_url]["title"], "Sample Doc")
 
 
 if __name__ == "__main__":

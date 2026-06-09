@@ -6,6 +6,7 @@
 
 - 文档 ingestion
 - 官方文档 crawler
+- 增量抓取 + 内容 hash 去重
 - 标题感知 chunking
 - Hybrid retrieval
 - 真实 dense embedding
@@ -14,6 +15,8 @@
 - grounded fallback generation
 - 结构化输出 + 内联 citation
 - provider health diagnostics
+- 评测集 + 自动评测脚本
+- 管理端 operator console
 - 引用与原始文档链接返回
 - FastAPI API
 - Web 演示页面
@@ -26,7 +29,7 @@
 
 - 基于公开技术文档构建 developer-facing RAG QA system，支持混合检索、结构化答案和证据引用
 - 设计多 provider LLM generation layer，兼容 OpenAI、Claude、DeepSeek、Groq、OpenRouter、Together、Qwen、Mistral、Perplexity 等主流模型接入
-- 实现官方文档抓取、知识库落盘、索引重建和 API/Web UI 闭环，具备真实产品化扩展基础
+- 实现官方文档抓取、增量同步、局部索引重建、自动评测和 API/Web UI 闭环，具备真实产品化扩展基础
 
 ## 1. 项目定位
 
@@ -81,6 +84,8 @@
 - CLI 位于 `scripts/fetch_docs.py`
 - 抓取结果会自动写入 `data/knowledge_base/<topic>/`
 - 每篇抓取结果自动附带 `topic`、`source_name`、`source_url` frontmatter
+- 抓取器会维护 `data/knowledge_base/.crawl_manifest.json`
+- 已抓取内容会基于 content hash 自动跳过未变化页面
 
 ### 3.2 检索能力
 
@@ -129,8 +134,23 @@
 Provider 运维能力：
 
 - `GET /api/v1/llm/options` 返回所有内置和扩展 provider
-- `GET /api/v1/llm/health` 返回 provider key 是否已配置、默认 provider、状态说明
+- `GET /api/v1/llm/health` 返回 provider key 是否已配置、默认 provider、状态说明、最近尝试次数
 - Web UI 会直接展示 configured / missing key 状态，便于演示和本地联调
+
+稳定性增强：
+
+- provider 超时、连接异常、429 和 5xx 会自动重试
+- 默认 provider 失败时，可自动降级到其他已配置 provider
+- 结构化 JSON 输出解析失败时，会走本地 repair 逻辑，尽量保住 citation 和摘要
+
+### 3.4 评测与运维
+
+- 内置评测集：`data/evaluation/devdocs_eval_set.json`
+- 自动评测脚本：`scripts/evaluate_rag.py`
+- 支持 `GET /api/v1/admin/logs` 查看最近查询日志
+- 支持 `GET /api/v1/docs/sources` 查看 source registry 与抓取状态
+- 支持 `POST /api/v1/docs/crawl` 触发增量抓取并按 topic 局部重建
+- Web UI 已内置 operator console，可直接运行 crawl / rebuild / evaluation
 
 默认 LLM 配置：
 
@@ -199,11 +219,13 @@ RAG/
 │   └── main.py            # FastAPI 入口
 ├── data/
 │   ├── doc_sources.json   # 官方文档抓取源配置
+│   ├── evaluation/        # 评测集
 │   └── knowledge_base/    # 示例知识库 / crawler 输出目录
 ├── docs/
 │   ├── developer-docs-product.md
 │   └── rag-system-plan.md
 ├── scripts/
+│   ├── evaluate_rag.py    # 自动评测 CLI
 │   ├── fetch_docs.py      # 官方文档抓取 CLI
 │   └── query_demo.py      # 命令行问答示例
 ├── tests/
@@ -264,6 +286,8 @@ RAG/
 - 将 top-k 证据块拼接进 prompt
 - 将 LLM 输出约束为结构化 JSON
 - 输出 provider catalog / health report，供 API 与前端直接消费
+- provider 失败自动重试，并可降级到其他已配置 provider
+- 结构化输出损坏时尝试本地 repair
 - 在失败时自动交回本地 fallback
 
 ### `app/core/doc_crawler.py`
@@ -276,6 +300,7 @@ RAG/
 - 限制抓取域名与页数
 - 提取正文、标题、代码块
 - 输出带 frontmatter 的 Markdown 文档
+- 基于 manifest 做增量更新和跳过未变化页面
 
 ### `app/services/rag_service.py`
 
@@ -284,6 +309,9 @@ RAG/
 - 加载知识库
 - 构建 chunk
 - 建立索引
+- 支持按 topic 局部重建
+- 记录最近查询日志
+- 运行内置评测集
 - 接收 query
 - 检索并生成答案
 
@@ -334,14 +362,52 @@ RAG/
 
 - `document_count`
 - `chunk_count`
+- `topic_count`
 - `knowledge_base_dir`
 - `retrieval_backend`
 - `reranker_backend`
 - `generation_backend`
+- `last_rebuild_at`
+- `query_log_size`
 
 ### 重建索引
 
 `POST /api/v1/index/rebuild`
+
+支持按 topic 局部重建：
+
+```json
+{
+  "topics": ["fastapi"]
+}
+```
+
+### 获取抓取源状态
+
+`GET /api/v1/docs/sources`
+
+### 触发增量抓取
+
+`POST /api/v1/docs/crawl`
+
+请求示例：
+
+```json
+{
+  "source_id": "fastapi",
+  "limit": 2,
+  "incremental": true,
+  "rebuild_after": true
+}
+```
+
+### 获取最近查询日志
+
+`GET /api/v1/admin/logs`
+
+### 运行评测集
+
+`POST /api/v1/evaluation/run`
 
 ### 查询问答
 
@@ -438,6 +504,12 @@ python3 scripts/fetch_docs.py --source fastapi
 python3 scripts/fetch_docs.py --source all --limit 3
 ```
 
+强制重写文件而不做增量跳过：
+
+```bash
+python3 scripts/fetch_docs.py --source fastapi --no-incremental
+```
+
 抓取源配置文件位于：
 
 - `data/doc_sources.json`
@@ -445,7 +517,9 @@ python3 scripts/fetch_docs.py --source all --limit 3
 抓取完成后，如需把新增文档纳入索引，执行：
 
 ```bash
-curl -X POST http://127.0.0.1:8000/api/v1/index/rebuild
+curl -X POST http://127.0.0.1:8000/api/v1/index/rebuild \
+  -H "Content-Type: application/json" \
+  -d '{"topics":["fastapi"]}'
 ```
 
 ### 8.3 启动服务
@@ -474,7 +548,19 @@ python3 scripts/query_demo.py "FastAPI 的依赖注入适合解决什么问题�
   --llm-model deepseek-chat
 ```
 
-### 8.5 Web 使用
+### 8.5 运行评测
+
+```bash
+python3 scripts/evaluate_rag.py
+```
+
+只评测单个 topic：
+
+```bash
+python3 scripts/evaluate_rag.py --topic fastapi --limit 4
+```
+
+### 8.6 Web 使用
 
 1. 启动 `uvicorn app.main:app --reload`
 2. 打开 `http://127.0.0.1:8000/`
@@ -494,8 +580,13 @@ python3 scripts/query_demo.py "FastAPI 的依赖注入适合解决什么问题�
 - 内联 citation 点击高亮
 - 原始文档跳转
 - 官方文档抓取命令提示
+- Source registry 状态面板
+- topic 局部重建
+- 评测摘要与失败样例预览
+- 最近查询日志
+- 一键 crawl / rebuild / evaluation 的 operator console
 
-### 8.6 单元测试
+### 8.7 单元测试
 
 ```bash
 python3 -m unittest discover -s tests
@@ -506,6 +597,8 @@ python3 -m unittest discover -s tests
 常用配置项：
 
 - `RAG_KB_DIR`
+- `RAG_DOC_SOURCES_PATH`
+- `RAG_EVAL_CASES_PATH`
 - `RAG_CHUNK_SIZE`
 - `RAG_CHUNK_OVERLAP`
 - `RAG_TOP_K`
@@ -523,6 +616,10 @@ python3 -m unittest discover -s tests
 - `RAG_LLM_MODEL`
 - `RAG_LLM_REASONING_EFFORT`
 - `RAG_LLM_MAX_OUTPUT_TOKENS`
+- `RAG_LLM_TIMEOUT_SECONDS`
+- `RAG_LLM_MAX_RETRIES`
+- `RAG_LLM_RETRY_BACKOFF_SECONDS`
+- `RAG_QUERY_LOG_SIZE`
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
 - `DEEPSEEK_API_KEY`
@@ -561,11 +658,13 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 - `python3 -m unittest discover -s tests`
 - `python3 -m compileall app tests scripts`
 - `scripts/fetch_docs.py` 可从 `data/doc_sources.json` 读取来源配置
+- `scripts/evaluate_rag.py` 可运行内置评测集
 - 轻量回退检索可运行
 - 真实 `sentence-transformers` embedding 可加载
 - 真实 `cross-encoder` rerank 可加载
 - 未配置可用 provider key 时可自动回退到 extractive 生成
 - `/api/v1/llm/health` 可返回 provider 配置状态
+- `/api/v1/docs/sources`、`/api/v1/docs/crawl`、`/api/v1/evaluation/run` 可正常返回
 - FastAPI 服务结构完整
 
 说明：
@@ -579,7 +678,7 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 最值得继续做的方向：
 
 1. 增加定时抓取、增量更新和去重策略
-2. 增加检索评测集与 answer quality benchmark
+2. 增加更大规模的检索评测集与 answer quality benchmark
 3. 支持代码片段级检索和答案中的代码高亮
 4. 增加登录、团队隔离和私有知识库权限控制
 5. 增加反馈闭环，把 bad case 回流到评测与 prompt 版本管理

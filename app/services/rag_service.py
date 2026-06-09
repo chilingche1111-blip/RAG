@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 from app.core.chunking import MarkdownChunker
 from app.core.dense_models import CrossEncoderReranker, SentenceTransformerEncoder
+from app.core.evaluation import EvalSummary, evaluate_cases, load_eval_cases
 from app.core.generation import GroundedAnswerGenerator
 from app.core.llm_generation import MultiProviderLLMGenerator
 from app.core.retrieval import HybridRetriever
@@ -20,6 +23,9 @@ class RAGService:
     retriever: HybridRetriever
     generator: GroundedAnswerGenerator
     documents: list[Document]
+    query_log_limit: int = 40
+    last_rebuild_at: str = ""
+    recent_queries_buffer: deque[dict[str, str]] | None = None
 
     @classmethod
     def from_directory(
@@ -41,6 +47,10 @@ class RAGService:
         llm_model_name: str = "gpt-5.4-mini",
         llm_reasoning_effort: str = "minimal",
         llm_max_output_tokens: int = 420,
+        llm_timeout_seconds: float = 30.0,
+        llm_max_retries: int = 2,
+        llm_retry_backoff_seconds: float = 1.0,
+        query_log_limit: int = 40,
     ) -> "RAGService":
         directory = Path(directory)
         service = cls(
@@ -67,24 +77,54 @@ class RAGService:
                     default_model_name=llm_model_name,
                     reasoning_effort=llm_reasoning_effort,
                     max_output_tokens=llm_max_output_tokens,
+                    timeout_seconds=llm_timeout_seconds,
+                    max_retries=llm_max_retries,
+                    retry_backoff_seconds=llm_retry_backoff_seconds,
                     enabled=llm_enabled,
                 )
             ),
             documents=[],
+            query_log_limit=query_log_limit,
+            recent_queries_buffer=deque(maxlen=query_log_limit),
         )
         service.rebuild()
         return service
 
-    def rebuild(self) -> dict[str, int | str]:
-        self.documents = self._load_documents(self.knowledge_base_dir)
-        chunks = self.chunker.chunk_documents(self.documents)
-        self.retriever.build(chunks)
+    def rebuild(self, topics: Optional[list[str]] = None) -> dict[str, int | str]:
+        normalized_topics = self._normalize_topics(topics)
+        if not normalized_topics or not self.documents:
+            self.documents = self._load_documents(self.knowledge_base_dir)
+            chunks = self.chunker.chunk_documents(self.documents)
+            self.retriever.build(chunks)
+        else:
+            replacement_documents = self._load_documents(
+                self.knowledge_base_dir,
+                topics=normalized_topics,
+            )
+            self.documents = [
+                document
+                for document in self.documents
+                if self._document_topic(document.metadata) not in normalized_topics
+            ]
+            self.documents.extend(replacement_documents)
+            self.documents.sort(key=lambda document: (self._document_topic(document.metadata), document.source))
+
+            replacement_chunks: dict[str, list] = {topic: [] for topic in normalized_topics}
+            for document in replacement_documents:
+                topic = self._document_topic(document.metadata)
+                replacement_chunks.setdefault(topic, []).extend(
+                    self.chunker.chunk_document(document)
+                )
+            self.retriever.replace_topic_chunks(replacement_chunks)
+        self.last_rebuild_at = datetime.now(timezone.utc).isoformat()
         return self.stats()
 
     def stats(self) -> dict[str, int | str]:
+        topics = {self._document_topic(document.metadata) for document in self.documents}
         return {
             "document_count": len(self.documents),
             "chunk_count": self.retriever.chunk_count,
+            "topic_count": len(topics),
             "knowledge_base_dir": str(self.knowledge_base_dir),
             "retrieval_backend": self.retriever.retrieval_backend,
             "reranker_backend": self.retriever.reranker_backend,
@@ -93,6 +133,8 @@ class RAGService:
                 if self.generator.llm_generator is not None
                 else "extractive"
             ),
+            "last_rebuild_at": self.last_rebuild_at,
+            "query_log_size": len(self.recent_queries_buffer or []),
         }
 
     def query(
@@ -109,20 +151,22 @@ class RAGService:
             top_k=top_k,
             metadata_filter=metadata_filter,
         )
-        return self.generator.generate(
+        result = self.generator.generate(
             question,
             hits,
             requested_topic=topic,
             llm_provider=llm_provider,
             llm_model=llm_model,
         )
+        self._record_query(question, result)
+        return result
 
     def llm_catalog(self) -> list[dict[str, str]]:
         if self.generator.llm_generator is None:
             return []
         return self.generator.llm_generator.provider_catalog()
 
-    def llm_health_report(self) -> list[dict[str, str | bool]]:
+    def llm_health_report(self) -> list[dict[str, object]]:
         if self.generator.llm_generator is None:
             return []
         return self.generator.llm_generator.provider_health_report()
@@ -151,16 +195,50 @@ class RAGService:
             "为什么 Docker 某一层失效后后续层也会重建？",
         ]
 
-    def _load_documents(self, directory: Path) -> list[Document]:
+    def recent_queries(self, limit: int = 20) -> list[dict[str, str]]:
+        if self.recent_queries_buffer is None:
+            return []
+        return list(self.recent_queries_buffer)[:limit]
+
+    def evaluate(
+        self,
+        eval_cases_path: Union[str, Path],
+        top_k: int = 4,
+        topic: Optional[str] = None,
+        llm_provider: Optional[str] = None,
+        llm_model: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> dict[str, object]:
+        cases = load_eval_cases(eval_cases_path)
+        if topic:
+            cases = [case for case in cases if (case.topic or "").lower() == topic.lower()]
+        if limit is not None:
+            cases = cases[:limit]
+        summary: EvalSummary = evaluate_cases(
+            self,
+            cases,
+            top_k=top_k,
+            llm_provider=llm_provider,
+            llm_model=llm_model,
+        )
+        return summary.to_dict()
+
+    def _load_documents(
+        self, directory: Path, topics: Optional[list[str]] = None
+    ) -> list[Document]:
         documents: list[Document] = []
         if not directory.exists():
             return documents
 
+        normalized_topics = self._normalize_topics(topics)
         for path in sorted(directory.rglob("*")):
             if not path.is_file() or path.suffix.lower() not in {".md", ".txt"}:
                 continue
             raw_text = path.read_text(encoding="utf-8")
             metadata, text = self._parse_frontmatter(path, raw_text)
+            document_topic = self._document_topic(metadata)
+            if normalized_topics and document_topic not in normalized_topics:
+                continue
             title = self._extract_title(path, text)
             doc_id = path.stem.replace(" ", "-").replace("_", "-").lower()
             documents.append(
@@ -208,3 +286,33 @@ class RAGService:
         if topic:
             metadata_filter["topic"] = topic
         return metadata_filter or None
+
+    def _normalize_topics(self, topics: Optional[list[str]]) -> list[str]:
+        if not topics:
+            return []
+        normalized = sorted(
+            {
+                str(topic).strip().lower()
+                for topic in topics
+                if str(topic).strip()
+            }
+        )
+        return normalized
+
+    def _document_topic(self, metadata: dict[str, str]) -> str:
+        return metadata.get("topic", "general").strip().lower() or "general"
+
+    def _record_query(self, question: str, result: QueryResult) -> None:
+        if self.recent_queries_buffer is None:
+            return
+        top_chunk_ids = ", ".join(hit.chunk.chunk_id for hit in result.hits[:2])
+        self.recent_queries_buffer.appendleft(
+            {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "question": question,
+                "topic": result.topic,
+                "confidence_label": result.confidence_label,
+                "answer_backend": result.answer_backend,
+                "top_chunk_ids": top_chunk_ids,
+            }
+        )

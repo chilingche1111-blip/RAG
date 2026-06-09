@@ -34,6 +34,11 @@ def main() -> None:
         default=None,
         help="Optional page limit override per source.",
     )
+    parser.add_argument(
+        "--no-incremental",
+        action="store_true",
+        help="Disable content-hash skipping and force file rewrites.",
+    )
     args = parser.parse_args()
 
     sources = load_doc_sources(args.config)
@@ -47,12 +52,23 @@ def main() -> None:
 
     with OfficialDocsCrawler() as crawler:
         for source in selected_sources:
-            documents = crawler.crawl_source(source, args.output_dir, page_limit=args.limit)
-            print(
-                f"[{source.source_id}] wrote {len(documents)} documents to {args.output_dir}/{source.topic}"
+            report = crawler.crawl_source_report(
+                source,
+                args.output_dir,
+                page_limit=args.limit,
+                incremental=not args.no_incremental,
             )
-            for document in documents:
-                print(f"- {document.file_name} <- {document.source_url}")
+            print(
+                f"[{source.source_id}] created={report.created_count} "
+                f"updated={report.updated_count} skipped={report.skipped_count} "
+                f"errors={report.error_count}"
+            )
+            for outcome in report.outcomes:
+                print(
+                    f"- {outcome.action}: {outcome.file_name} <- {outcome.source_url}"
+                )
+            for error in report.errors:
+                print(f"! {error}")
 
 
 if __name__ == "__main__":

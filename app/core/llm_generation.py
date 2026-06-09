@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -161,12 +162,17 @@ class MultiProviderLLMGenerator:
     default_model_name: str
     reasoning_effort: str = "minimal"
     max_output_tokens: int = 420
+    timeout_seconds: float = 30.0
+    max_retries: int = 2
+    retry_backoff_seconds: float = 1.0
     enabled: bool = True
 
     def __post_init__(self) -> None:
         self.provider_options = load_provider_options()
         self._clients: dict[str, object] = {}
         self._status: dict[str, str] = {}
+        self._last_error: dict[str, str] = {}
+        self._attempts: dict[str, int] = {}
 
     def generate(
         self,
@@ -183,38 +189,31 @@ class MultiProviderLLMGenerator:
         selected_provider = self._resolve_provider(provider_id)
         if selected_provider is None:
             return None, "extractive-fallback"
-        selected_model = model_name or selected_provider.default_model or self.default_model_name
         evidence_blocks = self._build_evidence_blocks(hits)
         structured_instruction = self._structured_instruction()
 
-        if selected_provider.provider_type == "openai_responses":
-            return self._generate_openai_responses(
-                selected_provider,
-                selected_model,
-                question,
-                topic,
-                documentation_hint,
-                evidence_blocks,
+        candidates = [selected_provider]
+        if provider_id is None:
+            candidates.extend(self._fallback_providers(selected_provider.provider_id))
+
+        for candidate in candidates:
+            selected_model = (
+                model_name
+                if model_name and candidate.provider_id == selected_provider.provider_id
+                else candidate.default_model or self.default_model_name
             )
-        if selected_provider.provider_type == "anthropic_messages":
-            return self._generate_anthropic_messages(
-                selected_provider,
-                selected_model,
-                question,
-                topic,
-                documentation_hint,
-                evidence_blocks,
-            )
-        if selected_provider.provider_type == "openai_compatible_chat":
-            return self._generate_openai_compatible_chat(
-                selected_provider,
+            answer, backend = self._generate_with_provider(
+                candidate,
                 selected_model,
                 question,
                 topic,
                 documentation_hint,
                 evidence_blocks,
                 structured_instruction,
+                hits,
             )
+            if answer is not None:
+                return answer, backend
         return None, "extractive-fallback"
 
     def backend_name(self, provider_id: str | None = None) -> str:
@@ -246,16 +245,23 @@ class MultiProviderLLMGenerator:
             for item in self.provider_options.values()
         ]
 
-    def provider_health_report(self) -> list[dict[str, str | bool]]:
-        report: list[dict[str, str | bool]] = []
+    def provider_health_report(self) -> list[dict[str, object]]:
+        report: list[dict[str, object]] = []
         for item in self.provider_options.values():
             configured = bool(os.getenv(item.api_key_env))
-            status = "configured" if configured else "missing_key"
-            message = (
-                f"Environment variable {item.api_key_env} is available."
-                if configured
-                else f"Environment variable {item.api_key_env} is not set."
-            )
+            status = self._status.get(item.provider_id, "configured" if configured else "missing_key")
+            last_error = self._last_error.get(item.provider_id, "")
+            if not configured:
+                status = "missing_key"
+                message = f"Environment variable {item.api_key_env} is not set."
+            elif last_error:
+                message = last_error
+            elif status == "ready":
+                message = f"Environment variable {item.api_key_env} is available."
+            elif status == "degraded":
+                message = "Provider had retryable failures but recovered on retry."
+            else:
+                message = f"Environment variable {item.api_key_env} is available."
             report.append(
                 {
                     "provider_id": item.provider_id,
@@ -268,10 +274,65 @@ class MultiProviderLLMGenerator:
                     "configured": configured,
                     "status": status,
                     "message": message,
+                    "attempts": self._attempts.get(item.provider_id, 0),
                     "selected_by_default": item.provider_id == self.default_provider_id,
                 }
             )
         return report
+
+    def _fallback_providers(self, selected_provider_id: str) -> list[LLMProviderOption]:
+        candidates: list[LLMProviderOption] = []
+        for provider in self.provider_options.values():
+            if provider.provider_id == selected_provider_id:
+                continue
+            if not os.getenv(provider.api_key_env):
+                continue
+            candidates.append(provider)
+        return candidates
+
+    def _generate_with_provider(
+        self,
+        provider: LLMProviderOption,
+        model_name: str,
+        question: str,
+        topic: str,
+        documentation_hint: str,
+        evidence_blocks: str,
+        structured_instruction: str,
+        hits: list[SearchHit],
+    ) -> tuple[StructuredAnswer | None, str]:
+        if provider.provider_type == "openai_responses":
+            return self._generate_openai_responses(
+                provider,
+                model_name,
+                question,
+                topic,
+                documentation_hint,
+                evidence_blocks,
+                hits,
+            )
+        if provider.provider_type == "anthropic_messages":
+            return self._generate_anthropic_messages(
+                provider,
+                model_name,
+                question,
+                topic,
+                documentation_hint,
+                evidence_blocks,
+                hits,
+            )
+        if provider.provider_type == "openai_compatible_chat":
+            return self._generate_openai_compatible_chat(
+                provider,
+                model_name,
+                question,
+                topic,
+                documentation_hint,
+                evidence_blocks,
+                structured_instruction,
+                hits,
+            )
+        return None, "extractive-fallback"
 
     def _resolve_provider(self, provider_id: str | None) -> LLMProviderOption | None:
         selected = provider_id or self.default_provider_id
@@ -314,6 +375,7 @@ class MultiProviderLLMGenerator:
         topic: str,
         documentation_hint: str,
         evidence_blocks: str,
+        hits: list[SearchHit],
     ) -> tuple[StructuredAnswer | None, str]:
         client = self._get_openai_client(provider)
         if client is None:
@@ -356,17 +418,23 @@ class MultiProviderLLMGenerator:
             request_kwargs["reasoning"] = {"effort": self.reasoning_effort}
 
         try:
-            response = client.responses.create(**request_kwargs)  # type: ignore[call-arg]
+            response = self._call_with_retry(
+                provider,
+                lambda: client.responses.create(**request_kwargs),  # type: ignore[call-arg]
+            )
             output_text = getattr(response, "output_text", None)
-            parsed = self._parse_structured_output(output_text)
+            parsed = self._parse_structured_output(output_text, hits)
             if parsed is not None:
                 self._status[provider.provider_id] = "ready"
+                self._last_error.pop(provider.provider_id, None)
                 return parsed, f"{provider.provider_id}:{model_name}"
-        except Exception:
+        except Exception as exc:
             self._status[provider.provider_id] = "unavailable"
+            self._last_error[provider.provider_id] = self._format_exception(exc)
             return None, "extractive-fallback"
 
         self._status[provider.provider_id] = "unavailable"
+        self._last_error[provider.provider_id] = "Structured output parsing failed after retries."
         return None, "extractive-fallback"
 
     def _generate_openai_compatible_chat(
@@ -378,6 +446,7 @@ class MultiProviderLLMGenerator:
         documentation_hint: str,
         evidence_blocks: str,
         structured_instruction: str,
+        hits: list[SearchHit],
     ) -> tuple[StructuredAnswer | None, str]:
         client = self._get_openai_client(provider)
         if client is None:
@@ -412,17 +481,23 @@ class MultiProviderLLMGenerator:
         }
 
         try:
-            response = client.chat.completions.create(**request_kwargs)  # type: ignore[call-arg]
+            response = self._call_with_retry(
+                provider,
+                lambda: client.chat.completions.create(**request_kwargs),  # type: ignore[call-arg]
+            )
             content = response.choices[0].message.content  # type: ignore[index]
-            parsed = self._parse_structured_output(content)
+            parsed = self._parse_structured_output(content, hits)
             if parsed is not None:
                 self._status[provider.provider_id] = "ready"
+                self._last_error.pop(provider.provider_id, None)
                 return parsed, f"{provider.provider_id}:{model_name}"
-        except Exception:
+        except Exception as exc:
             self._status[provider.provider_id] = "unavailable"
+            self._last_error[provider.provider_id] = self._format_exception(exc)
             return None, "extractive-fallback"
 
         self._status[provider.provider_id] = "unavailable"
+        self._last_error[provider.provider_id] = "Structured output parsing failed after retries."
         return None, "extractive-fallback"
 
     def _generate_anthropic_messages(
@@ -433,6 +508,7 @@ class MultiProviderLLMGenerator:
         topic: str,
         documentation_hint: str,
         evidence_blocks: str,
+        hits: list[SearchHit],
     ) -> tuple[StructuredAnswer | None, str]:
         client = self._get_anthropic_client(provider)
         if client is None:
@@ -452,22 +528,28 @@ class MultiProviderLLMGenerator:
             ]
         )
         try:
-            response = client.messages.create(  # type: ignore[call-arg]
-                model=model_name,
-                max_tokens=self.max_output_tokens,
-                system=system_prompt,
-                messages=[{"role": "user", "content": user_prompt}],
+            response = self._call_with_retry(
+                provider,
+                lambda: client.messages.create(  # type: ignore[call-arg]
+                    model=model_name,
+                    max_tokens=self.max_output_tokens,
+                    system=system_prompt,
+                    messages=[{"role": "user", "content": user_prompt}],
+                ),
             )
             raw_text = self._extract_anthropic_text(response)
-            parsed = self._parse_structured_output(raw_text)
+            parsed = self._parse_structured_output(raw_text, hits)
             if parsed is not None:
                 self._status[provider.provider_id] = "ready"
+                self._last_error.pop(provider.provider_id, None)
                 return parsed, f"{provider.provider_id}:{model_name}"
-        except Exception:
+        except Exception as exc:
             self._status[provider.provider_id] = "unavailable"
+            self._last_error[provider.provider_id] = self._format_exception(exc)
             return None, "extractive-fallback"
 
         self._status[provider.provider_id] = "unavailable"
+        self._last_error[provider.provider_id] = "Structured output parsing failed after retries."
         return None, "extractive-fallback"
 
     def _get_openai_client(self, provider: LLMProviderOption) -> object | None:
@@ -481,7 +563,7 @@ class MultiProviderLLMGenerator:
         try:
             from openai import OpenAI
 
-            kwargs: dict[str, Any] = {"api_key": api_key}
+            kwargs: dict[str, Any] = {"api_key": api_key, "timeout": self.timeout_seconds}
             if provider.base_url:
                 kwargs["base_url"] = provider.base_url
             client = OpenAI(**kwargs)
@@ -502,7 +584,7 @@ class MultiProviderLLMGenerator:
         try:
             from anthropic import Anthropic
 
-            client = Anthropic(api_key=api_key)
+            client = Anthropic(api_key=api_key, timeout=self.timeout_seconds)
             self._clients[cache_key] = client
             return client
         except Exception:
@@ -564,31 +646,38 @@ class MultiProviderLLMGenerator:
                 text_parts.append(text)
         return "\n".join(text_parts).strip() if text_parts else None
 
-    def _parse_structured_output(self, output_text: str | None) -> StructuredAnswer | None:
+    def _parse_structured_output(
+        self, output_text: str | None, hits: list[SearchHit]
+    ) -> StructuredAnswer | None:
         if not output_text or not isinstance(output_text, str):
             return None
         json_text = self._extract_json_block(output_text)
         if json_text is None:
-            return None
+            return self._repair_structured_output(output_text, hits)
         try:
             payload = json.loads(json_text)
         except json.JSONDecodeError:
-            return None
+            return self._repair_structured_output(output_text, hits)
         if not isinstance(payload, dict):
-            return None
+            return self._repair_structured_output(output_text, hits)
 
         summary = str(payload.get("summary", "")).strip()
         raw_key_points = payload.get("key_points", [])
         raw_caveats = payload.get("caveats", [])
         raw_chunk_ids = payload.get("used_chunk_ids", [])
         if not summary:
-            return None
+            return self._repair_structured_output(output_text, hits)
 
         key_points = self._normalize_items(raw_key_points)
         caveats = self._normalize_items(raw_caveats)
         used_chunk_ids = [
             str(chunk_id).strip() for chunk_id in raw_chunk_ids if str(chunk_id).strip()
         ]
+        allowed_chunk_ids = {hit.chunk.chunk_id for hit in hits}
+        used_chunk_ids = [chunk_id for chunk_id in used_chunk_ids if chunk_id in allowed_chunk_ids]
+        if not used_chunk_ids:
+            used_chunk_ids = self._extract_known_citations(summary, hits)
+        summary = self._append_missing_citations(summary, used_chunk_ids[:1])
         return StructuredAnswer(
             summary=summary,
             key_points=key_points,
@@ -615,6 +704,91 @@ class MultiProviderLLMGenerator:
                 f"{text} {citation_suffix}".strip() if citation_suffix and citation_suffix not in text else text
             )
         return normalized
+
+    def _repair_structured_output(
+        self, output_text: str, hits: list[SearchHit]
+    ) -> StructuredAnswer | None:
+        lines = [
+            line.strip()
+            for line in output_text.splitlines()
+            if line.strip() and not line.strip().startswith("```")
+        ]
+        if not lines:
+            return None
+        used_chunk_ids = self._extract_known_citations(output_text, hits)
+        fallback_citation = used_chunk_ids[:1] or [hits[0].chunk.chunk_id]
+        summary = self._append_missing_citations(lines[0], fallback_citation)
+        key_points: list[str] = []
+        caveats: list[str] = []
+        for line in lines[1:6]:
+            normalized = re.sub(r"^[\-\*\d\.\)\s]+", "", line).strip()
+            if not normalized:
+                continue
+            if any(token in normalized.lower() for token in ("注意", "caveat", "warning", "限制")):
+                caveats.append(self._append_missing_citations(normalized, fallback_citation))
+            else:
+                key_points.append(self._append_missing_citations(normalized, fallback_citation))
+        return StructuredAnswer(
+            summary=summary,
+            key_points=key_points[:3],
+            caveats=caveats[:2],
+            used_chunk_ids=used_chunk_ids or fallback_citation,
+        )
+
+    def _extract_known_citations(self, text: str, hits: list[SearchHit]) -> list[str]:
+        known_ids = {hit.chunk.chunk_id for hit in hits}
+        found = re.findall(r"\[([a-z0-9-]+)\]", text, re.IGNORECASE)
+        ordered: list[str] = []
+        for chunk_id in found:
+            if chunk_id in known_ids and chunk_id not in ordered:
+                ordered.append(chunk_id)
+        return ordered
+
+    def _append_missing_citations(self, text: str, chunk_ids: list[str]) -> str:
+        if not chunk_ids:
+            return text.strip()
+        if re.search(r"\[[a-z0-9-]+\]", text, re.IGNORECASE):
+            return text.strip()
+        suffix = " ".join(f"[{chunk_id}]" for chunk_id in chunk_ids if chunk_id)
+        return f"{text.strip()} {suffix}".strip()
+
+    def _call_with_retry(self, provider: LLMProviderOption, operation: Any) -> object:
+        attempts = max(1, self.max_retries + 1)
+        last_error: Exception | None = None
+        for attempt in range(1, attempts + 1):
+            self._attempts[provider.provider_id] = attempt
+            try:
+                if attempt > 1:
+                    self._status[provider.provider_id] = "degraded"
+                return operation()
+            except Exception as exc:  # pragma: no cover - network/vendor specific
+                last_error = exc
+                if attempt >= attempts or not self._is_retryable_exception(exc):
+                    break
+                time.sleep(self.retry_backoff_seconds * attempt)
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("LLM request failed without error details.")
+
+    def _is_retryable_exception(self, exc: Exception) -> bool:
+        message = str(exc).lower()
+        status_code = getattr(exc, "status_code", None)
+        if isinstance(status_code, int) and (status_code == 429 or status_code >= 500):
+            return True
+        retry_markers = [
+            "timeout",
+            "temporarily unavailable",
+            "rate limit",
+            "429",
+            "connection",
+            "server error",
+            "overloaded",
+        ]
+        return any(marker in message for marker in retry_markers)
+
+    def _format_exception(self, exc: Exception) -> str:
+        message = str(exc).strip()
+        return message[:220] if message else exc.__class__.__name__
 
     def _extract_json_block(self, output_text: str) -> str | None:
         fenced_match = re.search(r"```json\s*(\{.*\})\s*```", output_text, re.DOTALL)

@@ -111,17 +111,44 @@
                 <span>Official Docs Crawler</span>
               </div>
               <p class="ops-copy">
-                使用官方文档抓取器把公开文档转成 Markdown 知识文件，再调用重建索引接口完成更新。
+                使用官方文档抓取器把公开文档转成 Markdown 知识文件，再调用局部重建把变更同步到索引。
               </p>
+              <div class="ops-action-grid">
+                <label class="field">
+                  <span>抓取来源</span>
+                  <select id="crawl-source">
+                    <option value="all">全部来源</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>页数限制</span>
+                  <input id="crawl-limit" type="number" min="1" placeholder="留空使用默认值" />
+                </label>
+                <label class="field">
+                  <span>局部重建 Topic</span>
+                  <select id="rebuild-topic">
+                    <option value="">全部 Topic</option>
+                  </select>
+                </label>
+                <div class="field field-actions field-actions-stack">
+                  <span>运维动作</span>
+                  <div class="button-stack">
+                    <button id="crawl-button" type="button" class="primary-btn">抓取并重建</button>
+                    <button id="rebuild-button" type="button" class="ghost-btn">重建索引</button>
+                    <button id="eval-button" type="button" class="ghost-btn">运行评测</button>
+                  </div>
+                </div>
+              </div>
               <div class="command-stack">
                 <code>python3 scripts/fetch_docs.py --source fastapi</code>
                 <code>python3 scripts/fetch_docs.py --source all --limit 3</code>
-                <code>curl -X POST http://127.0.0.1:8000/api/v1/index/rebuild</code>
+                <code>curl -X POST http://127.0.0.1:8000/api/v1/index/rebuild -H "Content-Type: application/json" -d '{"topics":["fastapi"]}'</code>
               </div>
               <p class="ops-meta">
                 Source registry: <code>data/doc_sources.json</code> · Provider health:
                 <code>/api/v1/llm/health</code>
               </p>
+              <p id="ops-status" class="ops-status">等待操作</p>
             </div>
 
             <div class="suggestions">
@@ -187,6 +214,44 @@
                 <div id="citation-list" class="citation-list"></div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section class="ops-workspace">
+          <div class="panel ops-panel">
+            <div class="panel-head">
+              <h2>System Snapshot</h2>
+              <span id="ops-refresh-label">最近状态</span>
+            </div>
+            <div id="index-stat-list" class="metric-grid"></div>
+          </div>
+
+          <div class="panel ops-panel">
+            <div class="panel-head">
+              <h2>评测摘要</h2>
+              <span id="eval-run-label">未运行</span>
+            </div>
+            <div id="eval-summary-list" class="metric-grid metric-grid-compact"></div>
+            <div class="answer-block">
+              <h4>失败样例预览</h4>
+              <div id="eval-failure-list" class="compact-list"></div>
+            </div>
+          </div>
+
+          <div class="panel ops-panel ops-panel-wide">
+            <div class="panel-head">
+              <h2>Source Registry</h2>
+              <span id="source-count-label">0 个来源</span>
+            </div>
+            <div id="source-status-list" class="source-status-list"></div>
+          </div>
+
+          <div class="panel ops-panel ops-panel-wide">
+            <div class="panel-head">
+              <h2>Recent Query Logs</h2>
+              <span>内存滚动窗口</span>
+            </div>
+            <div id="recent-log-list" class="compact-list"></div>
           </div>
         </section>
       </main>

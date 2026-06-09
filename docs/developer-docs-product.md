@@ -32,6 +32,7 @@
 - 生成层：多 provider LLM + 本地 grounded fallback
 - 返回结构化答案、内联 citation、相关问题、引用片段和原始来源链接
 - 暴露 provider registry 与 provider health，支持前端直观展示配置状态
+- 支持增量抓取、topic 局部重建、自动评测和最近查询日志
 - 提供 REST API 与单页前端
 
 ## 4. 典型问题
@@ -60,9 +61,12 @@
 
 - `data/doc_sources.json` 维护官方文档来源
 - `scripts/fetch_docs.py` 执行公开文档抓取
-- `POST /api/v1/index/rebuild` 重建索引
+- `POST /api/v1/index/rebuild` 支持按 topic 局部重建
+- `POST /api/v1/docs/crawl` 执行增量抓取并回写知识库
+- `POST /api/v1/evaluation/run` 运行内置评测集
 - `GET /api/v1/llm/health` 查看模型层配置状态
-- Web UI 直接展示 provider 状态、抓取命令和 citation 跳转
+- `GET /api/v1/admin/logs` 查看最近查询日志
+- Web UI 直接展示 provider 状态、抓取命令、评测摘要、source registry 和 citation 跳转
 
 ## 5. 后续扩展
 

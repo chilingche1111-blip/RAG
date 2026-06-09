@@ -11,6 +11,12 @@ class Settings:
     knowledge_base_dir: Path = Path(
         os.getenv("RAG_KB_DIR", "data/knowledge_base")
     )
+    doc_sources_path: Path = Path(
+        os.getenv("RAG_DOC_SOURCES_PATH", "data/doc_sources.json")
+    )
+    eval_cases_path: Path = Path(
+        os.getenv("RAG_EVAL_CASES_PATH", "data/evaluation/devdocs_eval_set.json")
+    )
     chunk_size: int = int(os.getenv("RAG_CHUNK_SIZE", "520"))
     chunk_overlap: int = int(os.getenv("RAG_CHUNK_OVERLAP", "90"))
     default_top_k: int = int(os.getenv("RAG_TOP_K", "4"))
@@ -34,6 +40,12 @@ class Settings:
     llm_model_name: str = os.getenv("RAG_LLM_MODEL", "gpt-5.4-mini")
     llm_reasoning_effort: str = os.getenv("RAG_LLM_REASONING_EFFORT", "minimal")
     llm_max_output_tokens: int = int(os.getenv("RAG_LLM_MAX_OUTPUT_TOKENS", "420"))
+    llm_timeout_seconds: float = float(os.getenv("RAG_LLM_TIMEOUT_SECONDS", "30"))
+    llm_max_retries: int = int(os.getenv("RAG_LLM_MAX_RETRIES", "2"))
+    llm_retry_backoff_seconds: float = float(
+        os.getenv("RAG_LLM_RETRY_BACKOFF_SECONDS", "1.0")
+    )
+    query_log_size: int = int(os.getenv("RAG_QUERY_LOG_SIZE", "40"))
 
 
 settings = Settings()

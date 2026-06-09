@@ -1,0 +1,142 @@
+[
+  {
+    "case_id": "fastapi-001",
+    "topic": "fastapi",
+    "question": "FastAPI 的依赖注入适合解决什么问题？",
+    "expected_chunk_ids": ["dependencies-0001"],
+    "required_terms": ["shared logic", "authentication", "database sessions"]
+  },
+  {
+    "case_id": "fastapi-002",
+    "topic": "fastapi",
+    "question": "FastAPI 是怎么解析依赖关系的？",
+    "expected_chunk_ids": ["dependencies-0002"],
+    "required_terms": ["dependency graph", "injects", "sub-dependencies"]
+  },
+  {
+    "case_id": "fastapi-003",
+    "topic": "fastapi",
+    "question": "什么时候更适合用 dependencies 而不是 middleware？",
+    "expected_chunk_ids": ["dependencies-0003"],
+    "required_terms": ["typed inputs", "per-route", "middleware"]
+  },
+  {
+    "case_id": "fastapi-004",
+    "topic": "fastapi",
+    "question": "FastAPI 里 async def 适合什么场景？",
+    "expected_chunk_ids": ["async-routes-0001"],
+    "required_terms": ["awaits", "network io", "async database"]
+  },
+  {
+    "case_id": "asyncio-001",
+    "topic": "python-asyncio",
+    "question": "事件循环在 asyncio 里负责什么？",
+    "expected_chunk_ids": ["event-loop-0001"],
+    "required_terms": ["schedules coroutines", "callbacks", "io readiness"]
+  },
+  {
+    "case_id": "asyncio-002",
+    "topic": "python-asyncio",
+    "question": "为什么阻塞事件循环会影响其他协程？",
+    "expected_chunk_ids": ["event-loop-0002"],
+    "required_terms": ["blocks", "other coroutines", "executors"]
+  },
+  {
+    "case_id": "asyncio-003",
+    "topic": "python-asyncio",
+    "question": "asyncio 更适合什么类型的负载？",
+    "expected_chunk_ids": ["event-loop-0003"],
+    "required_terms": ["io-bound", "web servers", "cpu-bound"]
+  },
+  {
+    "case_id": "asyncio-004",
+    "topic": "python-asyncio",
+    "question": "await 和 asyncio.create_task 的核心区别是什么？",
+    "expected_chunk_ids": ["tasks-0001"],
+    "required_terms": ["await", "create_task", "concurrently"]
+  },
+  {
+    "case_id": "redis-001",
+    "topic": "redis",
+    "question": "RDB 快照的优势和代价是什么？",
+    "expected_chunk_ids": ["persistence-0001"],
+    "required_terms": ["point-in-time", "compact", "recent writes"]
+  },
+  {
+    "case_id": "redis-002",
+    "topic": "redis",
+    "question": "AOF 和 RDB 相比最大的差异是什么？",
+    "expected_chunk_ids": ["persistence-0002"],
+    "required_terms": ["write operations", "better durability", "recovery"]
+  },
+  {
+    "case_id": "redis-003",
+    "topic": "redis",
+    "question": "Redis 为什么很多部署同时启用 RDB 和 AOF？",
+    "expected_chunk_ids": ["persistence-0003"],
+    "required_terms": ["enable both", "restore speed", "durability"]
+  },
+  {
+    "case_id": "redis-004",
+    "topic": "redis",
+    "question": "如果更关心减少数据丢失，Redis 持久化应该偏向什么？",
+    "expected_chunk_ids": ["persistence-0003", "persistence-0002"],
+    "required_terms": ["aof", "reducing data loss", "durability"]
+  },
+  {
+    "case_id": "postgres-001",
+    "topic": "postgresql",
+    "question": "为什么 PostgreSQL 默认使用 B-Tree 索引？",
+    "expected_chunk_ids": ["btree-indexes-0001"],
+    "required_terms": ["default", "range queries", "ordered scans"]
+  },
+  {
+    "case_id": "postgres-002",
+    "topic": "postgresql",
+    "question": "哪些查询模式适合 B-Tree？",
+    "expected_chunk_ids": ["btree-indexes-0002"],
+    "required_terms": ["filters", "sorts", "ordering"]
+  },
+  {
+    "case_id": "postgres-003",
+    "topic": "postgresql",
+    "question": "B-Tree 索引的主要代价是什么？",
+    "expected_chunk_ids": ["btree-indexes-0003"],
+    "required_terms": ["write cost", "inserts", "updates"]
+  },
+  {
+    "case_id": "postgres-004",
+    "topic": "postgresql",
+    "question": "为什么 B-Tree 适合做范围查询和分页？",
+    "expected_chunk_ids": ["btree-indexes-0001", "btree-indexes-0002"],
+    "required_terms": ["range queries", "ordered scans", "pagination"]
+  },
+  {
+    "case_id": "docker-001",
+    "topic": "docker",
+    "question": "Docker build cache 是怎么工作的？",
+    "expected_chunk_ids": ["build-cache-0001"],
+    "required_terms": ["layer by layer", "cached result", "build time"]
+  },
+  {
+    "case_id": "docker-002",
+    "topic": "docker",
+    "question": "为什么前面的层一变，后面的层也经常要重建？",
+    "expected_chunk_ids": ["build-cache-0002"],
+    "required_terms": ["depend", "filesystem state", "dockerfile order"]
+  },
+  {
+    "case_id": "docker-003",
+    "topic": "docker",
+    "question": "优化 Dockerfile 缓存命中率的一个常见办法是什么？",
+    "expected_chunk_ids": ["build-cache-0003"],
+    "required_terms": ["dependencies", "application code", "cache hits"]
+  },
+  {
+    "case_id": "docker-004",
+    "topic": "docker",
+    "question": "为什么安装依赖这类稳定步骤应该放在 Dockerfile 前面？",
+    "expected_chunk_ids": ["build-cache-0003"],
+    "required_terms": ["stable steps", "earlier", "expensive setup"]
+  }
+]
