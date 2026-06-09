@@ -29,6 +29,10 @@ class Settings:
     )
     rerank_candidate_pool: int = int(os.getenv("RAG_RERANK_CANDIDATES", "8"))
     rerank_weight: float = float(os.getenv("RAG_RERANK_WEIGHT", "0.65"))
+    llm_enabled: bool = os.getenv("RAG_ENABLE_LLM", "1") == "1"
+    llm_model_name: str = os.getenv("RAG_LLM_MODEL", "gpt-5.4-mini")
+    llm_reasoning_effort: str = os.getenv("RAG_LLM_REASONING_EFFORT", "minimal")
+    llm_max_output_tokens: int = int(os.getenv("RAG_LLM_MAX_OUTPUT_TOKENS", "420"))
 
 
 settings = Settings()

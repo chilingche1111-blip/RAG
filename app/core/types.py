@@ -51,3 +51,4 @@ class QueryResult:
     confidence_label: str
     documentation_hint: str
     related_questions: List[str]
+    answer_backend: str

@@ -78,7 +78,7 @@ function renderResult(payload) {
   emptyState.classList.add("hidden");
   result.classList.remove("hidden");
 
-  resultTopic.textContent = `主题：${payload.topic}`;
+  resultTopic.textContent = `主题：${payload.topic} · 生成：${payload.answer_backend}`;
   resultQuestion.textContent = payload.question;
   confidenceBadge.textContent = `置信度：${payload.confidence_label}`;
   answerText.textContent = payload.answer;

@@ -9,7 +9,8 @@
 - Hybrid retrieval
 - 真实 dense embedding
 - cross-encoder rerank
-- grounded answer generation
+- OpenAI LLM answer generation
+- grounded fallback generation
 - 引用与原始文档链接返回
 - FastAPI API
 - Web 演示页面
@@ -82,12 +83,29 @@
 
 ### 3.3 问答输出
 
+当前生成链路分成两层：
+
+1. 优先调用 OpenAI Responses API 生成答案
+2. 如果没有配置 `OPENAI_API_KEY` 或调用失败，则自动回退到本地 extractive grounded answer
+
+默认 LLM 配置：
+
+- LLM：`gpt-5.4-mini`
+- API：OpenAI Responses API
+
+生成约束：
+
+- 只允许使用命中的文档证据回答
+- 不允许编造 API、参数或默认行为
+- 要求回答中附带命中 `chunk_id`
+
 问答结果包含：
 
 - `answer`
 - `confidence_label`
 - `documentation_hint`
 - `related_questions`
+- `answer_backend`
 - `citations`
 - `retrieved_chunks`
 
@@ -109,6 +127,7 @@
 
 - `sentence-transformers`
 - `torch`
+- `openai`
 - Hybrid RAG 自定义检索器
 
 ### 4.3 前端
@@ -168,13 +187,29 @@ RAG/
 
 ### `app/core/generation.py`
 
-不直接调用大模型，而是从命中文档中提取最相关句子，生成 grounded answer。
+负责生成层编排。
+
+当前策略：
+
+- 有 OpenAI API Key 时：调用真实 LLM 生成更自然的中文答案
+- 无 OpenAI API Key 时：回退到 extractive grounded answer
 
 这种设计的优点是：
 
-- 更容易演示 RAG 的核心价值
-- 不依赖外部 LLM API
-- 便于后续替换为真实生成模型
+- 本地无 Key 也能跑通
+- 接入 Key 后能直接升级成真实生成式问答
+- 保持答案仍然受证据约束
+
+### `app/core/llm_generation.py`
+
+负责 OpenAI Responses API 接入。
+
+主要能力：
+
+- 读取 `OPENAI_API_KEY`
+- 调用指定 OpenAI 模型
+- 将 top-k 证据块拼接进 prompt
+- 在失败时自动交回本地 fallback
 
 ### `app/services/rag_service.py`
 
@@ -211,6 +246,7 @@ RAG/
 - `knowledge_base_dir`
 - `retrieval_backend`
 - `reranker_backend`
+- `generation_backend`
 
 ### 重建索引
 
@@ -241,6 +277,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/query \
   "topic": "fastapi",
   "confidence_label": "high",
   "documentation_hint": "回答 FastAPI 问题时，优先区分路由层、依赖注入层和 async 运行时语义。",
+  "answer_backend": "openai:gpt-5.4-mini",
   "related_questions": [
     "FastAPI 依赖注入和中间件分别适合什么场景？"
   ],
@@ -263,6 +300,12 @@ curl -X POST http://127.0.0.1:8000/api/v1/query \
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+如果你想启用真实 LLM 生成，还需要配置：
+
+```bash
+export OPENAI_API_KEY=your_openai_api_key
 ```
 
 ### 8.2 启动服务
@@ -305,6 +348,11 @@ python3 -m unittest discover -s tests
 - `RAG_RERANKER_MODEL`
 - `RAG_RERANK_CANDIDATES`
 - `RAG_RERANK_WEIGHT`
+- `RAG_ENABLE_LLM`
+- `RAG_LLM_MODEL`
+- `RAG_LLM_REASONING_EFFORT`
+- `RAG_LLM_MAX_OUTPUT_TOKENS`
+- `OPENAI_API_KEY`
 
 示例见：[.env.example](/Users/cii/RAG_PROJECT/.env.example)
 
@@ -317,12 +365,14 @@ python3 -m unittest discover -s tests
 - 轻量回退检索可运行
 - 真实 `sentence-transformers` embedding 可加载
 - 真实 `cross-encoder` rerank 可加载
+- 未配置 `OPENAI_API_KEY` 时可自动回退到 extractive 生成
 - FastAPI 服务结构完整
 
 说明：
 
 - 首次加载真实模型时会下载 Hugging Face 模型文件，耗时明显更长
 - 本机 Python 使用 `LibreSSL` 时，`urllib3` 可能打印告警，但不影响当前功能运行
+- 真实 OpenAI 生成层需要你提供有效的 `OPENAI_API_KEY` 才能完成联网调用
 
 ## 11. 后续扩展建议
 

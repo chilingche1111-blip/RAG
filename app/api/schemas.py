@@ -42,6 +42,7 @@ class QueryResponse(BaseModel):
     confidence_label: str
     documentation_hint: str
     related_questions: List[str]
+    answer_backend: str
     citations: List[CitationResponse]
     retrieved_chunks: List[ChunkResponse]
 
@@ -66,6 +67,7 @@ class IndexStatsResponse(BaseModel):
     knowledge_base_dir: str
     retrieval_backend: str
     reranker_backend: str
+    generation_backend: str
 
 
 class RebuildResponse(BaseModel):

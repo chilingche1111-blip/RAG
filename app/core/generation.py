@@ -2,12 +2,19 @@ from __future__ import annotations
 
 from collections import Counter
 
+from app.core.llm_generation import OpenAIResponseGenerator
 from app.core.topic_catalog import get_topic_profile
 from app.core.text import best_matching_sentences, extract_lexical_terms
 from app.core.types import QueryResult, SearchHit
 
 
 class GroundedAnswerGenerator:
+    def __init__(
+        self,
+        llm_generator: OpenAIResponseGenerator | None = None,
+    ) -> None:
+        self.llm_generator = llm_generator
+
     def generate(
         self,
         question: str,
@@ -25,6 +32,7 @@ class GroundedAnswerGenerator:
                 confidence_label="low",
                 documentation_hint="优先使用明确的组件名、功能名或 API 名称来提问，检索效果会更稳定。",
                 related_questions=[],
+                answer_backend="extractive",
             )
 
         query_terms = extract_lexical_terms(question)
@@ -45,7 +53,6 @@ class GroundedAnswerGenerator:
             evidence_lines = [hits[0].chunk.text[:240].strip()]
 
         topic = requested_topic or self._detect_topic(hits)
-        answer = " ".join(evidence_lines)
         profile = get_topic_profile(topic)
         documentation_hint = (
             profile.documentation_hint
@@ -57,6 +64,19 @@ class GroundedAnswerGenerator:
             if profile
             else self._generic_related_questions(question)
         )
+        answer = " ".join(evidence_lines)
+        answer_backend = "extractive"
+
+        if self.llm_generator is not None:
+            llm_answer, llm_backend = self.llm_generator.generate(
+                question=question,
+                topic=topic,
+                documentation_hint=documentation_hint,
+                hits=hits,
+            )
+            if llm_answer:
+                answer = llm_answer
+            answer_backend = llm_backend
 
         return QueryResult(
             answer=answer,
@@ -65,6 +85,7 @@ class GroundedAnswerGenerator:
             confidence_label=self._confidence_label(hits[0].score),
             documentation_hint=documentation_hint,
             related_questions=related_questions,
+            answer_backend=answer_backend,
         )
 
     def _detect_topic(self, hits: list[SearchHit]) -> str:

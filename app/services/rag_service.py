@@ -7,6 +7,7 @@ from typing import Union
 from app.core.chunking import MarkdownChunker
 from app.core.dense_models import CrossEncoderReranker, SentenceTransformerEncoder
 from app.core.generation import GroundedAnswerGenerator
+from app.core.llm_generation import OpenAIResponseGenerator
 from app.core.retrieval import HybridRetriever
 from app.core.topic_catalog import list_topic_profiles
 from app.core.types import Document, QueryResult
@@ -35,6 +36,10 @@ class RAGService:
         reranker_model_name: str = "BAAI/bge-reranker-base",
         rerank_candidate_pool: int = 8,
         rerank_weight: float = 0.65,
+        llm_enabled: bool = True,
+        llm_model_name: str = "gpt-5.4-mini",
+        llm_reasoning_effort: str = "minimal",
+        llm_max_output_tokens: int = 420,
     ) -> "RAGService":
         directory = Path(directory)
         service = cls(
@@ -55,7 +60,14 @@ class RAGService:
                 rerank_candidate_pool=rerank_candidate_pool,
                 rerank_weight=rerank_weight,
             ),
-            generator=GroundedAnswerGenerator(),
+            generator=GroundedAnswerGenerator(
+                llm_generator=OpenAIResponseGenerator(
+                    model_name=llm_model_name,
+                    reasoning_effort=llm_reasoning_effort,
+                    max_output_tokens=llm_max_output_tokens,
+                    enabled=llm_enabled,
+                )
+            ),
             documents=[],
         )
         service.rebuild()
@@ -74,6 +86,11 @@ class RAGService:
             "knowledge_base_dir": str(self.knowledge_base_dir),
             "retrieval_backend": self.retriever.retrieval_backend,
             "reranker_backend": self.retriever.reranker_backend,
+            "generation_backend": (
+                self.generator.llm_generator.backend_name()
+                if self.generator.llm_generator is not None
+                else "extractive"
+            ),
         }
 
     def query(

@@ -28,6 +28,7 @@ def main() -> None:
     print("Question:", args.question)
     print("Topic:", result.topic)
     print("Confidence:", result.confidence_label)
+    print("Answer backend:", result.answer_backend)
     print("Answer:", result.answer)
     print("Documentation hint:", result.documentation_hint)
     if result.related_questions:

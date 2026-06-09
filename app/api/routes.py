@@ -36,6 +36,10 @@ def get_service() -> RAGService:
         reranker_model_name=settings.reranker_model_name,
         rerank_candidate_pool=settings.rerank_candidate_pool,
         rerank_weight=settings.rerank_weight,
+        llm_enabled=settings.llm_enabled,
+        llm_model_name=settings.llm_model_name,
+        llm_reasoning_effort=settings.llm_reasoning_effort,
+        llm_max_output_tokens=settings.llm_max_output_tokens,
     )
 
 
@@ -76,6 +80,7 @@ def query(payload: QueryRequest) -> QueryResponse:
         confidence_label=result.confidence_label,
         documentation_hint=result.documentation_hint,
         related_questions=result.related_questions,
+        answer_backend=result.answer_backend,
         citations=[
             CitationResponse(
                 chunk_id=hit.chunk.chunk_id,
