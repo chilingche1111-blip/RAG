@@ -122,6 +122,11 @@ class RAGService:
             return []
         return self.generator.llm_generator.provider_catalog()
 
+    def llm_health_report(self) -> list[dict[str, str | bool]]:
+        if self.generator.llm_generator is None:
+            return []
+        return self.generator.llm_generator.provider_health_report()
+
     def topic_catalog(self) -> list[dict[str, str | list[str]]]:
         return [
             {

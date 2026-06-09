@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Optional
 
 from fastapi import APIRouter
 
@@ -8,6 +9,7 @@ from app.api.schemas import (
     ChunkResponse,
     CitationResponse,
     IndexStatsResponse,
+    LLMHealthResponse,
     LLMOptionResponse,
     QueryRequest,
     QueryResponse,
@@ -128,7 +130,7 @@ def topics() -> list[TopicResponse]:
 
 
 @router.get("/api/v1/suggestions", response_model=SuggestionResponse)
-def suggestions(topic: str | None = None) -> SuggestionResponse:
+def suggestions(topic: Optional[str] = None) -> SuggestionResponse:
     return SuggestionResponse(
         topic=topic,
         questions=get_service().suggested_questions(topic),
@@ -138,3 +140,8 @@ def suggestions(topic: str | None = None) -> SuggestionResponse:
 @router.get("/api/v1/llm/options", response_model=list[LLMOptionResponse])
 def llm_options() -> list[LLMOptionResponse]:
     return [LLMOptionResponse(**item) for item in get_service().llm_catalog()]
+
+
+@router.get("/api/v1/llm/health", response_model=list[LLMHealthResponse])
+def llm_health() -> list[LLMHealthResponse]:
+    return [LLMHealthResponse(**item) for item in get_service().llm_health_report()]

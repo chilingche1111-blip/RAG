@@ -240,8 +240,32 @@ textarea {
   border-top: 1px solid var(--line);
 }
 
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 14px 0 16px;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--accent-deep);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.status-pill-soft {
+  background: rgba(15, 23, 38, 0.06);
+  color: var(--muted);
+}
+
 .provider-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -260,11 +284,22 @@ textarea {
   box-shadow: 0 16px 34px rgba(15, 118, 110, 0.08);
 }
 
+.provider-card-active {
+  border-color: rgba(15, 118, 110, 0.46);
+  box-shadow: 0 18px 38px rgba(15, 118, 110, 0.16);
+}
+
 .provider-card-top,
 .provider-meta {
   display: flex;
   justify-content: space-between;
   gap: 12px;
+}
+
+.provider-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .provider-card p {
@@ -285,6 +320,67 @@ textarea {
 .provider-meta-soft {
   margin-top: 6px;
   color: var(--accent-deep);
+}
+
+.provider-state,
+.provider-flag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.provider-state-ready,
+.provider-flag {
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--accent-deep);
+}
+
+.provider-state-missing {
+  background: rgba(180, 83, 9, 0.12);
+  color: #9a3412;
+}
+
+.provider-note,
+.ops-copy,
+.ops-meta {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.ops-card {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(236, 246, 250, 0.88));
+  border: 1px solid rgba(15, 118, 110, 0.12);
+}
+
+.command-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.command-stack code {
+  display: block;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(15, 23, 38, 0.06);
+  font-family: "IBM Plex Mono", monospace;
+  overflow-x: auto;
+}
+
+.ops-meta code {
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(15, 23, 38, 0.06);
+  font-family: "IBM Plex Mono", monospace;
 }
 
 .primary-btn,
@@ -480,6 +576,10 @@ textarea {
   }
 
   .controls-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .provider-list {
     grid-template-columns: 1fr;
   }
 }

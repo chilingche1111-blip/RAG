@@ -97,9 +97,32 @@
                   <h3>Provider Registry</h3>
                   <span id="provider-count">0 个</span>
                 </div>
+                <div class="status-strip">
+                  <span id="llm-status-summary" class="status-pill">检测中</span>
+                  <span id="default-provider-badge" class="status-pill status-pill-soft">默认 provider</span>
+                </div>
                 <div id="provider-list" class="provider-list"></div>
               </div>
             </form>
+
+            <div class="ops-card">
+              <div class="panel-head">
+                <h3>知识库接入</h3>
+                <span>Official Docs Crawler</span>
+              </div>
+              <p class="ops-copy">
+                使用官方文档抓取器把公开文档转成 Markdown 知识文件，再调用重建索引接口完成更新。
+              </p>
+              <div class="command-stack">
+                <code>python3 scripts/fetch_docs.py --source fastapi</code>
+                <code>python3 scripts/fetch_docs.py --source all --limit 3</code>
+                <code>curl -X POST http://127.0.0.1:8000/api/v1/index/rebuild</code>
+              </div>
+              <p class="ops-meta">
+                Source registry: <code>data/doc_sources.json</code> · Provider health:
+                <code>/api/v1/llm/health</code>
+              </p>
+            </div>
 
             <div class="suggestions">
               <div class="panel-head">

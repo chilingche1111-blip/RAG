@@ -1,0 +1,61 @@
+[
+  {
+    "source_id": "fastapi",
+    "topic": "fastapi",
+    "label": "FastAPI Official Docs",
+    "start_urls": [
+      "https://fastapi.tiangolo.com/tutorial/dependencies/",
+      "https://fastapi.tiangolo.com/async/"
+    ],
+    "allow_domains": ["fastapi.tiangolo.com"],
+    "max_pages": 4,
+    "description": "FastAPI dependencies, async behavior, and adjacent official pages."
+  },
+  {
+    "source_id": "python-asyncio",
+    "topic": "python-asyncio",
+    "label": "Python Asyncio Docs",
+    "start_urls": [
+      "https://docs.python.org/3/library/asyncio.html",
+      "https://docs.python.org/3/library/asyncio-task.html"
+    ],
+    "allow_domains": ["docs.python.org"],
+    "max_pages": 4,
+    "description": "Python official asyncio docs and coroutines/tasks references."
+  },
+  {
+    "source_id": "redis",
+    "topic": "redis",
+    "label": "Redis Docs",
+    "start_urls": [
+      "https://redis.io/docs/latest/operate/oss_and_stack/management/persistence/"
+    ],
+    "allow_domains": ["redis.io"],
+    "max_pages": 3,
+    "description": "Redis persistence docs."
+  },
+  {
+    "source_id": "postgresql",
+    "topic": "postgresql",
+    "label": "PostgreSQL Docs",
+    "start_urls": [
+      "https://www.postgresql.org/docs/current/btree.html",
+      "https://www.postgresql.org/docs/current/indexes.html"
+    ],
+    "allow_domains": ["www.postgresql.org"],
+    "max_pages": 4,
+    "description": "PostgreSQL indexing docs."
+  },
+  {
+    "source_id": "docker",
+    "topic": "docker",
+    "label": "Docker Docs",
+    "start_urls": [
+      "https://docs.docker.com/build/cache/",
+      "https://docs.docker.com/build/cache/invalidation/"
+    ],
+    "allow_domains": ["docs.docker.com"],
+    "max_pages": 4,
+    "description": "Docker build cache docs."
+  }
+]

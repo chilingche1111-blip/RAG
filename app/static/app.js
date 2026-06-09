@@ -9,6 +9,8 @@ const llmProviderSelect = document.getElementById("llm-provider");
 const llmModelInput = document.getElementById("llm-model");
 const providerCount = document.getElementById("provider-count");
 const providerList = document.getElementById("provider-list");
+const llmStatusSummary = document.getElementById("llm-status-summary");
+const defaultProviderBadge = document.getElementById("default-provider-badge");
 const statusLabel = document.getElementById("status-label");
 const emptyState = document.getElementById("empty-state");
 const result = document.getElementById("result");
@@ -23,9 +25,10 @@ const caveatList = document.getElementById("caveat-list");
 const documentationHint = document.getElementById("documentation-hint");
 const relatedQuestionList = document.getElementById("related-question-list");
 const citationList = document.getElementById("citation-list");
+let providerRegistry = [];
 
 function escapeHtml(text) {
-  return text
+  return String(text ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -60,12 +63,22 @@ function bindCitationButtons(target) {
   });
 }
 
+async function parseResponse(response) {
+  const payload = await response.json();
+  if (!response.ok) {
+    const detail = payload.detail || payload.message || "Request failed.";
+    throw new Error(detail);
+  }
+  return payload;
+}
+
 async function fetchTopics() {
   const response = await fetch("/api/v1/topics");
-  const topics = await response.json();
+  const topics = await parseResponse(response);
 
   topicCount.textContent = `${topics.length} 个主题`;
   topicList.innerHTML = "";
+  topicSelect.innerHTML = '<option value="">全部</option>';
 
   topics.forEach((topic) => {
     const card = document.createElement("article");
@@ -73,12 +86,12 @@ async function fetchTopics() {
     const sources = topic.official_sources
       .map(
         (source) =>
-          `<a class="source-pill" href="${source.url}" target="_blank" rel="noreferrer">${source.name}</a>`,
+          `<a class="source-pill" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer">${escapeHtml(source.name)}</a>`,
       )
       .join("");
     card.innerHTML = `
-      <h3>${topic.label}</h3>
-      <p>${topic.description}</p>
+      <h3>${escapeHtml(topic.label)}</h3>
+      <p>${escapeHtml(topic.description)}</p>
       <div class="source-list">${sources}</div>
     `;
     card.addEventListener("click", () => {
@@ -95,14 +108,45 @@ async function fetchTopics() {
   });
 }
 
-async function fetchLLMOptions() {
-  const response = await fetch("/api/v1/llm/options");
-  const providers = await response.json();
+function syncProviderSelectionUI() {
+  providerList.querySelectorAll(".provider-card").forEach((card) => {
+    const active = card.dataset.providerId === llmProviderSelect.value;
+    card.classList.toggle("provider-card-active", active);
+  });
+}
 
-  providerCount.textContent = `${providers.length} 个`;
+function applyProviderDefaults(providerId) {
+  const provider = providerRegistry.find((item) => item.provider_id === providerId);
+  if (!provider) {
+    return;
+  }
+  llmModelInput.value = provider.default_model;
+}
+
+async function fetchLLMOptions() {
+  const [optionsResponse, healthResponse] = await Promise.all([
+    fetch("/api/v1/llm/options"),
+    fetch("/api/v1/llm/health"),
+  ]);
+  const providers = await parseResponse(optionsResponse);
+  const health = await parseResponse(healthResponse);
+  const healthById = new Map(health.map((item) => [item.provider_id, item]));
+  const configuredCount = health.filter((item) => item.configured).length;
+  const defaultProvider = health.find((item) => item.selected_by_default);
+  providerRegistry = providers;
+
+  providerCount.textContent = `${providers.length} 个 · ${configuredCount} 已配置`;
+  llmStatusSummary.textContent = configuredCount
+    ? `${configuredCount}/${health.length} 个 provider key 已配置`
+    : "未检测到 provider key，将回退到 grounded answer";
+  defaultProviderBadge.textContent = defaultProvider
+    ? `默认：${defaultProvider.label}`
+    : "默认 provider 未设置";
   providerList.innerHTML = "";
+  llmProviderSelect.innerHTML = '<option value="">默认</option>';
 
   providers.forEach((provider) => {
+    const providerHealth = healthById.get(provider.provider_id);
     const option = document.createElement("option");
     option.value = provider.provider_id;
     option.textContent = `${provider.label} · ${provider.default_model}`;
@@ -110,27 +154,43 @@ async function fetchLLMOptions() {
 
     const card = document.createElement("article");
     card.className = "provider-card";
+    card.dataset.providerId = provider.provider_id;
     const baseUrlLabel = provider.base_url ? provider.base_url : "native endpoint";
+    const stateLabel = providerHealth?.configured ? "已配置" : "缺少 Key";
+    const stateClass = providerHealth?.configured
+      ? "provider-state-ready"
+      : "provider-state-missing";
+    const defaultLabel = providerHealth?.selected_by_default
+      ? '<span class="provider-flag">默认</span>'
+      : "";
     card.innerHTML = `
       <div class="provider-card-top">
-        <strong>${provider.label}</strong>
-        <span class="provider-type">${provider.provider_type}</span>
+        <strong>${escapeHtml(provider.label)}</strong>
+        <div class="provider-card-badges">
+          ${defaultLabel}
+          <span class="provider-state ${stateClass}">${stateLabel}</span>
+        </div>
       </div>
-      <p>${provider.description}</p>
+      <p>${escapeHtml(provider.description)}</p>
       <div class="provider-meta">
-        <span>${provider.default_model}</span>
-        <span>${provider.api_key_env}</span>
+        <span>${escapeHtml(provider.default_model)}</span>
+        <span>${escapeHtml(provider.api_key_env)}</span>
       </div>
       <div class="provider-meta provider-meta-soft">
-        <span>${baseUrlLabel}</span>
+        <span>${escapeHtml(provider.provider_type)}</span>
+        <span>${escapeHtml(baseUrlLabel)}</span>
       </div>
+      <div class="provider-note">${escapeHtml(providerHealth?.message || "未获取到状态信息。")}</div>
     `;
     card.addEventListener("click", () => {
       llmProviderSelect.value = provider.provider_id;
-      llmModelInput.value = provider.default_model;
+      applyProviderDefaults(provider.provider_id);
+      syncProviderSelectionUI();
     });
     providerList.appendChild(card);
   });
+
+  syncProviderSelectionUI();
 }
 
 async function loadSuggestions(topic = "") {
@@ -140,7 +200,7 @@ async function loadSuggestions(topic = "") {
   }
 
   const response = await fetch(`/api/v1/suggestions?${params.toString()}`);
-  const data = await response.json();
+  const data = await parseResponse(response);
 
   suggestionList.innerHTML = "";
   data.questions.forEach((question) => {
@@ -186,17 +246,17 @@ function renderResult(payload) {
   citationList.innerHTML = "";
   payload.retrieved_chunks.forEach((chunk) => {
     const link = chunk.source_url
-      ? `<a class="citation-link" href="${chunk.source_url}" target="_blank" rel="noreferrer">原始文档</a>`
+      ? `<a class="citation-link" href="${escapeHtml(chunk.source_url)}" target="_blank" rel="noreferrer">原始文档</a>`
       : "";
     const rerank = chunk.rerank_score !== null ? ` · rerank ${chunk.rerank_score}` : "";
     const card = document.createElement("article");
     card.className = "citation-card";
     card.id = `citation-${chunk.chunk_id}`;
     card.innerHTML = `
-      <h5>${chunk.source_name}</h5>
-      <p>${chunk.text}</p>
+      <h5>${escapeHtml(chunk.source_name)}</h5>
+      <p>${escapeHtml(chunk.text)}</p>
       <div class="citation-meta">
-        <span>${chunk.topic} · score ${chunk.score}${rerank}</span>
+        <span>${escapeHtml(chunk.topic)} · score ${chunk.score}${rerank}</span>
         <span>${link}</span>
       </div>
     `;
@@ -223,21 +283,34 @@ async function runQuery(event) {
     payload.llm_model = llmModelInput.value.trim();
   }
 
-  const response = await fetch("/api/v1/query", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  try {
+    const response = await fetch("/api/v1/query", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-  const data = await response.json();
-  renderResult(data);
-  statusLabel.textContent = "已完成";
+    const data = await parseResponse(response);
+    renderResult(data);
+    statusLabel.textContent = "已完成";
+  } catch (error) {
+    result.classList.add("hidden");
+    emptyState.classList.remove("hidden");
+    emptyState.textContent = error.message || "查询失败，请检查服务日志。";
+    statusLabel.textContent = "失败";
+  }
 }
 
 topicSelect.addEventListener("change", () => loadSuggestions(topicSelect.value));
 refreshSuggestionsButton.addEventListener("click", () => loadSuggestions(topicSelect.value));
+llmProviderSelect.addEventListener("change", () => {
+  if (llmProviderSelect.value) {
+    applyProviderDefaults(llmProviderSelect.value);
+  }
+  syncProviderSelectionUI();
+});
 queryForm.addEventListener("submit", runQuery);
 
 fetchTopics();

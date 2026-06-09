@@ -246,6 +246,33 @@ class MultiProviderLLMGenerator:
             for item in self.provider_options.values()
         ]
 
+    def provider_health_report(self) -> list[dict[str, str | bool]]:
+        report: list[dict[str, str | bool]] = []
+        for item in self.provider_options.values():
+            configured = bool(os.getenv(item.api_key_env))
+            status = "configured" if configured else "missing_key"
+            message = (
+                f"Environment variable {item.api_key_env} is available."
+                if configured
+                else f"Environment variable {item.api_key_env} is not set."
+            )
+            report.append(
+                {
+                    "provider_id": item.provider_id,
+                    "label": item.label,
+                    "provider_type": item.provider_type,
+                    "api_key_env": item.api_key_env,
+                    "default_model": item.default_model,
+                    "base_url": item.base_url or "",
+                    "description": item.description,
+                    "configured": configured,
+                    "status": status,
+                    "message": message,
+                    "selected_by_default": item.provider_id == self.default_provider_id,
+                }
+            )
+        return report
+
     def _resolve_provider(self, provider_id: str | None) -> LLMProviderOption | None:
         selected = provider_id or self.default_provider_id
         return self.provider_options.get(selected)

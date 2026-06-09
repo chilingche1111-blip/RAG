@@ -26,10 +26,12 @@
 ## 3. 当前能力
 
 - 导入 Markdown 形式的文档摘要知识库
+- 抓取公开官方文档并沉淀为 Markdown 知识文件
 - 使用 `topic` 元数据管理知识源
 - 混合检索：关键词 + 真实 dense embedding + cross-encoder rerank
 - 生成层：多 provider LLM + 本地 grounded fallback
 - 返回结构化答案、内联 citation、相关问题、引用片段和原始来源链接
+- 暴露 provider registry 与 provider health，支持前端直观展示配置状态
 - 提供 REST API 与单页前端
 
 ## 4. 典型问题
@@ -53,6 +55,14 @@
 - DashScope Qwen
 - Mistral
 - Perplexity
+
+当前已经具备的产品化闭环：
+
+- `data/doc_sources.json` 维护官方文档来源
+- `scripts/fetch_docs.py` 执行公开文档抓取
+- `POST /api/v1/index/rebuild` 重建索引
+- `GET /api/v1/llm/health` 查看模型层配置状态
+- Web UI 直接展示 provider 状态、抓取命令和 citation 跳转
 
 ## 5. 后续扩展
 
