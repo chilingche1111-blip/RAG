@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DevDocs QA</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <p class="eyebrow">Developer Knowledge Assistant</p>
+          <h1>DevDocs QA</h1>
+          <p class="brand-copy">
+            基于官方技术文档构建的智能问答系统，返回可引用、可继续追踪的答案。
+          </p>
+        </div>
+        <section class="panel">
+          <div class="panel-head">
+            <h2>文档主题</h2>
+            <span id="topic-count">0 个主题</span>
+          </div>
+          <div id="topic-list" class="topic-list"></div>
+        </section>
+      </aside>
+
+      <main class="main">
+        <section class="hero">
+          <div>
+            <p class="eyebrow">Hybrid Retrieval</p>
+            <h2>把公开技术文档变成一个可检索、可引用的开发者问答入口</h2>
+            <p class="hero-copy">
+              输入组件名、问题或 API 概念，系统会返回 grounded answer、文档提示和原始来源。
+            </p>
+          </div>
+          <div class="hero-stats">
+            <div class="stat-card">
+              <span>知识源</span>
+              <strong>官方文档主题</strong>
+            </div>
+            <div class="stat-card">
+              <span>检索</span>
+              <strong>Hybrid RAG</strong>
+            </div>
+            <div class="stat-card">
+              <span>输出</span>
+              <strong>证据可追踪</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="workspace">
+          <div class="panel query-panel">
+            <div class="panel-head">
+              <h2>开始查询</h2>
+              <span>支持技术主题过滤</span>
+            </div>
+            <form id="query-form">
+              <label class="field">
+                <span>问题</span>
+                <textarea
+                  id="question"
+                  placeholder="例如：asyncio.create_task 和直接 await 有什么区别？"
+                  required
+                ></textarea>
+              </label>
+              <div class="controls controls-compact">
+                <label class="field">
+                  <span>技术主题</span>
+                  <select id="topic">
+                    <option value="">全部</option>
+                  </select>
+                </label>
+                <button type="submit" class="primary-btn">生成回答</button>
+              </div>
+            </form>
+
+            <div class="suggestions">
+              <div class="panel-head">
+                <h3>推荐问题</h3>
+                <button id="refresh-suggestions" class="ghost-btn" type="button">
+                  刷新
+                </button>
+              </div>
+              <div id="suggestion-list" class="chip-list"></div>
+            </div>
+          </div>
+
+          <div class="panel answer-panel">
+            <div class="panel-head">
+              <h2>回答结果</h2>
+              <span id="status-label">等待查询</span>
+            </div>
+            <div id="empty-state" class="empty-state">
+              输入一个技术问题，系统会返回基于文档证据的回答和来源。
+            </div>
+            <div id="result" class="result hidden">
+              <div class="result-top">
+                <div>
+                  <p id="result-topic" class="result-topic"></p>
+                  <h3 id="result-question"></h3>
+                </div>
+                <span id="confidence-badge" class="badge"></span>
+              </div>
+
+              <div class="answer-block">
+                <h4>答案</h4>
+                <p id="answer-text"></p>
+              </div>
+
+              <div class="answer-block tip-block">
+                <h4>文档提示</h4>
+                <p id="documentation-hint"></p>
+              </div>
+
+              <div class="answer-block">
+                <h4>可继续追问</h4>
+                <ul id="related-question-list" class="simple-list"></ul>
+              </div>
+
+              <div class="answer-block">
+                <h4>引用片段</h4>
+                <div id="citation-list" class="citation-list"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
