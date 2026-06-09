@@ -67,6 +67,12 @@ def cosine_similarity(
     return dot_product / (left_norm * right_norm)
 
 
+def dense_dot_similarity(left: list[float], right: list[float]) -> float:
+    if not left or not right or len(left) != len(right):
+        return 0.0
+    return sum(l_value * r_value for l_value, r_value in zip(left, right))
+
+
 def sentence_split(text: str) -> list[str]:
     cleaned_lines = []
     for line in text.splitlines():

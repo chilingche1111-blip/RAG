@@ -25,6 +25,7 @@ class ChunkResponse(BaseModel):
     score: float
     lexical_score: float
     semantic_score: float
+    rerank_score: float | None = None
     text: str
 
 
@@ -63,6 +64,8 @@ class IndexStatsResponse(BaseModel):
     document_count: int
     chunk_count: int
     knowledge_base_dir: str
+    retrieval_backend: str
+    reranker_backend: str
 
 
 class RebuildResponse(BaseModel):

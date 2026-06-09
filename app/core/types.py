@@ -31,6 +31,7 @@ class IndexedChunk:
     semantic_terms: Counter[str]
     lexical_norm: float
     semantic_norm: float
+    dense_embedding: list[float] | None = None
 
 
 @dataclass(frozen=True)
@@ -39,6 +40,7 @@ class SearchHit:
     score: float
     lexical_score: float
     semantic_score: float
+    rerank_score: float | None = None
 
 
 @dataclass(frozen=True)

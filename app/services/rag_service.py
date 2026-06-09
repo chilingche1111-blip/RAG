@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Union
 
 from app.core.chunking import MarkdownChunker
+from app.core.dense_models import CrossEncoderReranker, SentenceTransformerEncoder
 from app.core.generation import GroundedAnswerGenerator
 from app.core.retrieval import HybridRetriever
 from app.core.topic_catalog import list_topic_profiles
@@ -26,12 +27,34 @@ class RAGService:
         chunk_size: int = 520,
         chunk_overlap: int = 90,
         min_score: float = 0.08,
+        lexical_weight: float = 0.35,
+        semantic_weight: float = 0.65,
+        embedding_enabled: bool = True,
+        embedding_model_name: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        reranker_enabled: bool = True,
+        reranker_model_name: str = "BAAI/bge-reranker-base",
+        rerank_candidate_pool: int = 8,
+        rerank_weight: float = 0.65,
     ) -> "RAGService":
         directory = Path(directory)
         service = cls(
             knowledge_base_dir=directory,
             chunker=MarkdownChunker(chunk_size=chunk_size, overlap=chunk_overlap),
-            retriever=HybridRetriever(min_score=min_score),
+            retriever=HybridRetriever(
+                lexical_weight=lexical_weight,
+                semantic_weight=semantic_weight,
+                min_score=min_score,
+                embedding_encoder=SentenceTransformerEncoder(
+                    model_name=embedding_model_name,
+                    enabled=embedding_enabled,
+                ),
+                reranker=CrossEncoderReranker(
+                    model_name=reranker_model_name,
+                    enabled=reranker_enabled,
+                ),
+                rerank_candidate_pool=rerank_candidate_pool,
+                rerank_weight=rerank_weight,
+            ),
             generator=GroundedAnswerGenerator(),
             documents=[],
         )
@@ -49,6 +72,8 @@ class RAGService:
             "document_count": len(self.documents),
             "chunk_count": self.retriever.chunk_count,
             "knowledge_base_dir": str(self.knowledge_base_dir),
+            "retrieval_backend": self.retriever.retrieval_backend,
+            "reranker_backend": self.retriever.reranker_backend,
         }
 
     def query(

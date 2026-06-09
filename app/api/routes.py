@@ -28,6 +28,14 @@ def get_service() -> RAGService:
         chunk_size=settings.chunk_size,
         chunk_overlap=settings.chunk_overlap,
         min_score=settings.min_score,
+        lexical_weight=settings.lexical_weight,
+        semantic_weight=settings.semantic_weight,
+        embedding_enabled=settings.embedding_enabled,
+        embedding_model_name=settings.embedding_model_name,
+        reranker_enabled=settings.reranker_enabled,
+        reranker_model_name=settings.reranker_model_name,
+        rerank_candidate_pool=settings.rerank_candidate_pool,
+        rerank_weight=settings.rerank_weight,
     )
 
 
@@ -91,6 +99,9 @@ def query(payload: QueryRequest) -> QueryResponse:
                 score=round(hit.score, 4),
                 lexical_score=round(hit.lexical_score, 4),
                 semantic_score=round(hit.semantic_score, 4),
+                rerank_score=(
+                    round(hit.rerank_score, 4) if hit.rerank_score is not None else None
+                ),
                 text=hit.chunk.text,
             )
             for hit in result.hits
