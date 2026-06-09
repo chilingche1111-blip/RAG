@@ -28,7 +28,7 @@
 - 导入 Markdown 形式的文档摘要知识库
 - 使用 `topic` 元数据管理知识源
 - 混合检索：关键词 + 真实 dense embedding + cross-encoder rerank
-- 生成层：OpenAI LLM + 本地 grounded fallback
+- 生成层：多 provider LLM + 本地 grounded fallback
 - 返回答案、置信度、文档提示、相关问题、引用片段和原始来源链接
 - 提供 REST API 与单页前端
 
@@ -46,4 +46,4 @@
 - 增加代码片段检索与答案高亮
 - 支持多文档站点联合问答
 - 增加用户反馈和答案质量评测
-- 增加 OpenAI 生成答案的评测与 prompt 版本管理
+- 增加多 provider 生成答案的评测与 prompt 版本管理

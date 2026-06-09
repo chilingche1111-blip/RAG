@@ -9,7 +9,7 @@
 - Hybrid retrieval
 - 真实 dense embedding
 - cross-encoder rerank
-- OpenAI LLM answer generation
+- multi-provider LLM answer generation
 - grounded fallback generation
 - 引用与原始文档链接返回
 - FastAPI API
@@ -85,23 +85,38 @@
 
 当前生成链路分成两层：
 
-1. 优先调用 OpenAI Responses API 生成答案
-2. 如果没有配置 `OPENAI_API_KEY` 或调用失败，则自动回退到本地 extractive grounded answer
+1. 优先调用配置好的 LLM provider 生成结构化答案
+2. 如果没有配置对应 provider 的 API Key 或调用失败，则自动回退到本地 extractive grounded answer
+
+当前内置 provider：
+
+- `OpenAI`：Responses API
+- `Claude`：Anthropic Messages API
+- `DeepSeek`：OpenAI-compatible API
+- `Groq`：OpenAI-compatible API
+- `OpenRouter`：OpenAI-compatible API
+
+同时支持通过 `RAG_EXTRA_LLM_PROVIDERS_JSON` 增加更多 OpenAI-compatible provider。
 
 默认 LLM 配置：
 
-- LLM：`gpt-5.4-mini`
-- API：OpenAI Responses API
+- Provider：`openai`
+- Model：`gpt-5.4-mini`
 
 生成约束：
 
 - 只允许使用命中的文档证据回答
 - 不允许编造 API、参数或默认行为
-- 要求回答中附带命中 `chunk_id`
+- 生成层先输出结构化答案对象
+- 关键结论和要点必须附带内联 `chunk_id` citation
 
 问答结果包含：
 
 - `answer`
+- `summary`
+- `key_points`
+- `caveats`
+- `used_chunk_ids`
 - `confidence_label`
 - `documentation_hint`
 - `related_questions`
@@ -128,6 +143,7 @@
 - `sentence-transformers`
 - `torch`
 - `openai`
+- `anthropic`
 - Hybrid RAG 自定义检索器
 
 ### 4.3 前端
@@ -191,8 +207,8 @@ RAG/
 
 当前策略：
 
-- 有 OpenAI API Key 时：调用真实 LLM 生成更自然的中文答案
-- 无 OpenAI API Key 时：回退到 extractive grounded answer
+- 有可用 provider key 时：调用真实 LLM 生成结构化答案
+- 无可用 provider key 时：回退到 extractive grounded answer
 
 这种设计的优点是：
 
@@ -202,13 +218,14 @@ RAG/
 
 ### `app/core/llm_generation.py`
 
-负责 OpenAI Responses API 接入。
+负责多 provider LLM 接入。
 
 主要能力：
 
-- 读取 `OPENAI_API_KEY`
-- 调用指定 OpenAI 模型
+- 读取不同 provider 的 API Key
+- 调用 OpenAI / Claude / OpenAI-compatible provider
 - 将 top-k 证据块拼接进 prompt
+- 将 LLM 输出约束为结构化 JSON
 - 在失败时自动交回本地 fallback
 
 ### `app/services/rag_service.py`
@@ -234,6 +251,10 @@ RAG/
 ### 获取推荐问题
 
 `GET /api/v1/suggestions`
+
+### 获取 LLM Provider 选项
+
+`GET /api/v1/llm/options`
 
 ### 获取索引状态
 
@@ -273,7 +294,15 @@ curl -X POST http://127.0.0.1:8000/api/v1/query \
 ```json
 {
   "question": "FastAPI 的依赖注入适合解决什么问题？",
-  "answer": "When a request reaches a path operation, FastAPI builds a dependency graph...",
+  "answer": "结论：FastAPI dependencies let you declare shared logic once and reuse it across path operations. [dependencies-0001]\n\n关键点：\n- FastAPI dependencies are useful for shared request-time logic. [dependencies-0001]",
+  "summary": "FastAPI dependencies let you declare shared logic once and reuse it across path operations. [dependencies-0001]",
+  "key_points": [
+    "FastAPI dependencies are useful for shared request-time logic. [dependencies-0001]"
+  ],
+  "caveats": [
+    "Middleware is better for request-wide wrapping behavior. [dependencies-0003]"
+  ],
+  "used_chunk_ids": ["dependencies-0001", "dependencies-0003"],
   "topic": "fastapi",
   "confidence_label": "high",
   "documentation_hint": "回答 FastAPI 问题时，优先区分路由层、依赖注入层和 async 运行时语义。",
@@ -306,6 +335,15 @@ pip install -r requirements.txt
 
 ```bash
 export OPENAI_API_KEY=your_openai_api_key
+```
+
+如果切换其他 provider，还需要配置对应 key，例如：
+
+```bash
+export ANTHROPIC_API_KEY=your_anthropic_api_key
+export DEEPSEEK_API_KEY=your_deepseek_api_key
+export GROQ_API_KEY=your_groq_api_key
+export OPENROUTER_API_KEY=your_openrouter_api_key
 ```
 
 ### 8.2 启动服务
@@ -349,10 +387,16 @@ python3 -m unittest discover -s tests
 - `RAG_RERANK_CANDIDATES`
 - `RAG_RERANK_WEIGHT`
 - `RAG_ENABLE_LLM`
+- `RAG_LLM_PROVIDER`
 - `RAG_LLM_MODEL`
 - `RAG_LLM_REASONING_EFFORT`
 - `RAG_LLM_MAX_OUTPUT_TOKENS`
 - `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY`
+- `DEEPSEEK_API_KEY`
+- `GROQ_API_KEY`
+- `OPENROUTER_API_KEY`
+- `RAG_EXTRA_LLM_PROVIDERS_JSON`
 
 示例见：[.env.example](/Users/cii/RAG_PROJECT/.env.example)
 
@@ -365,20 +409,20 @@ python3 -m unittest discover -s tests
 - 轻量回退检索可运行
 - 真实 `sentence-transformers` embedding 可加载
 - 真实 `cross-encoder` rerank 可加载
-- 未配置 `OPENAI_API_KEY` 时可自动回退到 extractive 生成
+- 未配置可用 provider key 时可自动回退到 extractive 生成
 - FastAPI 服务结构完整
 
 说明：
 
 - 首次加载真实模型时会下载 Hugging Face 模型文件，耗时明显更长
 - 本机 Python 使用 `LibreSSL` 时，`urllib3` 可能打印告警，但不影响当前功能运行
-- 真实 OpenAI 生成层需要你提供有效的 `OPENAI_API_KEY` 才能完成联网调用
+- 真实 LLM 生成层需要你提供对应 provider 的有效 API Key 才能完成联网调用
 
 ## 11. 后续扩展建议
 
 最值得继续做的方向：
 
-1. 接入真正的 LLM 生成层，把证据片段变成更自然的中文答案
+1. 增加更多预置 provider，例如 Together、Moonshot、企业自建兼容网关
 2. 增加官方文档抓取器和增量索引更新
 3. 增加 rerank 前后的评测指标
 4. 支持代码片段级检索

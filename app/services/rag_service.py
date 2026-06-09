@@ -7,7 +7,7 @@ from typing import Union
 from app.core.chunking import MarkdownChunker
 from app.core.dense_models import CrossEncoderReranker, SentenceTransformerEncoder
 from app.core.generation import GroundedAnswerGenerator
-from app.core.llm_generation import OpenAIResponseGenerator
+from app.core.llm_generation import MultiProviderLLMGenerator
 from app.core.retrieval import HybridRetriever
 from app.core.topic_catalog import list_topic_profiles
 from app.core.types import Document, QueryResult
@@ -37,6 +37,7 @@ class RAGService:
         rerank_candidate_pool: int = 8,
         rerank_weight: float = 0.65,
         llm_enabled: bool = True,
+        llm_provider: str = "openai",
         llm_model_name: str = "gpt-5.4-mini",
         llm_reasoning_effort: str = "minimal",
         llm_max_output_tokens: int = 420,
@@ -61,8 +62,9 @@ class RAGService:
                 rerank_weight=rerank_weight,
             ),
             generator=GroundedAnswerGenerator(
-                llm_generator=OpenAIResponseGenerator(
-                    model_name=llm_model_name,
+                llm_generator=MultiProviderLLMGenerator(
+                    default_provider_id=llm_provider,
+                    default_model_name=llm_model_name,
                     reasoning_effort=llm_reasoning_effort,
                     max_output_tokens=llm_max_output_tokens,
                     enabled=llm_enabled,
@@ -98,6 +100,8 @@ class RAGService:
         question: str,
         top_k: int = 4,
         topic: str | None = None,
+        llm_provider: str | None = None,
+        llm_model: str | None = None,
     ) -> QueryResult:
         metadata_filter = self._build_metadata_filter(topic)
         hits = self.retriever.search(
@@ -109,7 +113,14 @@ class RAGService:
             question,
             hits,
             requested_topic=topic,
+            llm_provider=llm_provider,
+            llm_model=llm_model,
         )
+
+    def llm_catalog(self) -> list[dict[str, str]]:
+        if self.generator.llm_generator is None:
+            return []
+        return self.generator.llm_generator.provider_catalog()
 
     def topic_catalog(self) -> list[dict[str, str | list[str]]]:
         return [

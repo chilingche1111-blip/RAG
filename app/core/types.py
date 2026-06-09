@@ -46,6 +46,10 @@ class SearchHit:
 @dataclass(frozen=True)
 class QueryResult:
     answer: str
+    summary: str
+    key_points: List[str]
+    caveats: List[str]
+    used_chunk_ids: List[str]
     hits: List[SearchHit]
     topic: str
     confidence_label: str

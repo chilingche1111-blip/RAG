@@ -33,11 +33,17 @@ class QueryRequest(BaseModel):
     question: str = Field(..., min_length=3)
     top_k: int = Field(default=4, ge=1, le=10)
     topic: str | None = None
+    llm_provider: str | None = None
+    llm_model: str | None = None
 
 
 class QueryResponse(BaseModel):
     question: str
     answer: str
+    summary: str
+    key_points: List[str]
+    caveats: List[str]
+    used_chunk_ids: List[str]
     topic: str
     confidence_label: str
     documentation_hint: str
@@ -59,6 +65,16 @@ class TopicResponse(BaseModel):
 class SuggestionResponse(BaseModel):
     topic: str | None = None
     questions: List[str]
+
+
+class LLMOptionResponse(BaseModel):
+    provider_id: str
+    label: str
+    provider_type: str
+    api_key_env: str
+    default_model: str
+    base_url: str
+    description: str
 
 
 class IndexStatsResponse(BaseModel):

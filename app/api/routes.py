@@ -8,6 +8,7 @@ from app.api.schemas import (
     ChunkResponse,
     CitationResponse,
     IndexStatsResponse,
+    LLMOptionResponse,
     QueryRequest,
     QueryResponse,
     RebuildResponse,
@@ -37,6 +38,7 @@ def get_service() -> RAGService:
         rerank_candidate_pool=settings.rerank_candidate_pool,
         rerank_weight=settings.rerank_weight,
         llm_enabled=settings.llm_enabled,
+        llm_provider=settings.llm_provider,
         llm_model_name=settings.llm_model_name,
         llm_reasoning_effort=settings.llm_reasoning_effort,
         llm_max_output_tokens=settings.llm_max_output_tokens,
@@ -72,10 +74,16 @@ def query(payload: QueryRequest) -> QueryResponse:
         payload.question,
         top_k=payload.top_k,
         topic=payload.topic,
+        llm_provider=payload.llm_provider,
+        llm_model=payload.llm_model,
     )
     return QueryResponse(
         question=payload.question,
         answer=result.answer,
+        summary=result.summary,
+        key_points=result.key_points,
+        caveats=result.caveats,
+        used_chunk_ids=result.used_chunk_ids,
         topic=result.topic,
         confidence_label=result.confidence_label,
         documentation_hint=result.documentation_hint,
@@ -125,3 +133,8 @@ def suggestions(topic: str | None = None) -> SuggestionResponse:
         topic=topic,
         questions=get_service().suggested_questions(topic),
     )
+
+
+@router.get("/api/v1/llm/options", response_model=list[LLMOptionResponse])
+def llm_options() -> list[LLMOptionResponse]:
+    return [LLMOptionResponse(**item) for item in get_service().llm_catalog()]

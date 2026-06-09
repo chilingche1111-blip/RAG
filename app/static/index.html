@@ -65,14 +65,39 @@
                   required
                 ></textarea>
               </label>
-              <div class="controls controls-compact">
+              <div class="controls controls-grid">
                 <label class="field">
                   <span>技术主题</span>
                   <select id="topic">
                     <option value="">全部</option>
                   </select>
                 </label>
-                <button type="submit" class="primary-btn">生成回答</button>
+                <label class="field">
+                  <span>LLM Provider</span>
+                  <select id="llm-provider">
+                    <option value="">默认</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>模型名</span>
+                  <input
+                    id="llm-model"
+                    type="text"
+                    placeholder="可留空，使用 provider 默认模型"
+                  />
+                </label>
+                <div class="field field-actions">
+                  <span>生成层</span>
+                  <button type="submit" class="primary-btn">生成回答</button>
+                </div>
+              </div>
+
+              <div class="provider-panel">
+                <div class="panel-head">
+                  <h3>Provider Registry</h3>
+                  <span id="provider-count">0 个</span>
+                </div>
+                <div id="provider-list" class="provider-list"></div>
               </div>
             </form>
 
@@ -104,9 +129,24 @@
                 <span id="confidence-badge" class="badge"></span>
               </div>
 
+              <div class="backend-strip">
+                <span id="backend-badge" class="backend-badge"></span>
+                <span id="chunk-usage" class="backend-badge backend-badge-soft"></span>
+              </div>
+
               <div class="answer-block">
-                <h4>答案</h4>
-                <p id="answer-text"></p>
+                <h4>结论</h4>
+                <p id="summary-text" class="answer-summary"></p>
+              </div>
+
+              <div class="answer-block">
+                <h4>关键点</h4>
+                <ul id="key-point-list" class="simple-list"></ul>
+              </div>
+
+              <div class="answer-block">
+                <h4>注意事项</h4>
+                <ul id="caveat-list" class="simple-list"></ul>
               </div>
 
               <div class="answer-block tip-block">

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from collections import Counter
 
-from app.core.llm_generation import OpenAIResponseGenerator
+from app.core.answer_format import StructuredAnswer
+from app.core.llm_generation import MultiProviderLLMGenerator
 from app.core.topic_catalog import get_topic_profile
 from app.core.text import best_matching_sentences, extract_lexical_terms
 from app.core.types import QueryResult, SearchHit
@@ -11,7 +12,7 @@ from app.core.types import QueryResult, SearchHit
 class GroundedAnswerGenerator:
     def __init__(
         self,
-        llm_generator: OpenAIResponseGenerator | None = None,
+        llm_generator: MultiProviderLLMGenerator | None = None,
     ) -> None:
         self.llm_generator = llm_generator
 
@@ -20,13 +21,25 @@ class GroundedAnswerGenerator:
         question: str,
         hits: list[SearchHit],
         requested_topic: str | None = None,
+        llm_provider: str | None = None,
+        llm_model: str | None = None,
     ) -> QueryResult:
         if not hits:
-            return QueryResult(
-                answer=(
+            empty_answer = StructuredAnswer(
+                summary=(
                     "当前索引里的技术文档没有足够证据支撑这个问题。建议你缩小范围，"
                     "或者显式选择一个技术主题，例如 FastAPI、asyncio、Redis、PostgreSQL 或 Docker。"
                 ),
+                key_points=[],
+                caveats=[],
+                used_chunk_ids=[],
+            )
+            return QueryResult(
+                answer=empty_answer.to_text(),
+                summary=empty_answer.summary,
+                key_points=empty_answer.key_points,
+                caveats=empty_answer.caveats,
+                used_chunk_ids=empty_answer.used_chunk_ids,
                 hits=[],
                 topic=requested_topic or "general",
                 confidence_label="low",
@@ -64,7 +77,7 @@ class GroundedAnswerGenerator:
             if profile
             else self._generic_related_questions(question)
         )
-        answer = " ".join(evidence_lines)
+        structured_answer = self._build_fallback_answer(hits, evidence_lines)
         answer_backend = "extractive"
 
         if self.llm_generator is not None:
@@ -73,13 +86,19 @@ class GroundedAnswerGenerator:
                 topic=topic,
                 documentation_hint=documentation_hint,
                 hits=hits,
+                provider_id=llm_provider,
+                model_name=llm_model,
             )
             if llm_answer:
-                answer = llm_answer
+                structured_answer = llm_answer
             answer_backend = llm_backend
 
         return QueryResult(
-            answer=answer,
+            answer=structured_answer.to_text(),
+            summary=structured_answer.summary,
+            key_points=structured_answer.key_points,
+            caveats=structured_answer.caveats,
+            used_chunk_ids=structured_answer.used_chunk_ids,
             hits=hits,
             topic=topic,
             confidence_label=self._confidence_label(hits[0].score),
@@ -108,3 +127,36 @@ class GroundedAnswerGenerator:
             "这个能力在官方文档里通常和哪些相邻概念一起出现？",
             "如果这个行为异常，最值得继续查哪一层文档：框架、运行时还是基础设施？",
         ]
+
+    def _build_fallback_answer(
+        self, hits: list[SearchHit], evidence_lines: list[str]
+    ) -> StructuredAnswer:
+        summary_parts: list[str] = []
+        key_points: list[str] = []
+        used_chunk_ids: list[str] = []
+
+        for index, hit in enumerate(hits[:3]):
+            sentences = best_matching_sentences(hit.chunk.text, [], 2)
+            chosen_sentence = evidence_lines[index] if index < len(evidence_lines) else (
+                sentences[0] if sentences else hit.chunk.text[:220].strip()
+            )
+            cited_sentence = f"{chosen_sentence} [{hit.chunk.chunk_id}]"
+            if index == 0:
+                summary_parts.append(cited_sentence)
+            key_points.append(cited_sentence)
+            used_chunk_ids.append(hit.chunk.chunk_id)
+
+        summary = " ".join(summary_parts).strip() if summary_parts else "未找到足够证据。"
+        caveats = []
+        if len(hits) > 1:
+            caveats.append(
+                "如果需要更确定的结论，建议继续查看上面的原始文档链接并对比相邻章节。 "
+                + " ".join(f"[{hit.chunk.chunk_id}]" for hit in hits[:2])
+            )
+
+        return StructuredAnswer(
+            summary=summary,
+            key_points=key_points,
+            caveats=caveats,
+            used_chunk_ids=used_chunk_ids,
+        )

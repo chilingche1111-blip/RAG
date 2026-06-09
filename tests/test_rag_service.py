@@ -9,10 +9,13 @@ class RAGServiceTest(unittest.TestCase):
 
         catalog = service.topic_catalog()
         suggestions = service.suggested_questions("docker")
+        llm_catalog = service.llm_catalog()
 
         self.assertGreaterEqual(len(catalog), 5)
         self.assertGreaterEqual(len(suggestions), 1)
         self.assertIn("official_sources", catalog[0])
+        self.assertGreaterEqual(len(llm_catalog), 3)
+        self.assertEqual(llm_catalog[0]["provider_id"], "openai")
 
     def test_query_returns_requested_topic_when_filtered(self) -> None:
         service = RAGService.from_directory("data/knowledge_base")

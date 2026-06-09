@@ -16,6 +16,8 @@ def main() -> None:
     parser.add_argument("question", help="Question to ask the RAG system.")
     parser.add_argument("--top-k", type=int, default=3, help="Number of chunks to return.")
     parser.add_argument("--topic", help="Optional technical topic filter.")
+    parser.add_argument("--llm-provider", help="Optional LLM provider override.")
+    parser.add_argument("--llm-model", help="Optional LLM model override.")
     args = parser.parse_args()
 
     service = RAGService.from_directory("data/knowledge_base")
@@ -23,6 +25,8 @@ def main() -> None:
         args.question,
         top_k=args.top_k,
         topic=args.topic,
+        llm_provider=args.llm_provider,
+        llm_model=args.llm_model,
     )
 
     print("Question:", args.question)

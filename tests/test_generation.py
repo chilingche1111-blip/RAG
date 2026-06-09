@@ -10,10 +10,25 @@ class FakeLLMGenerator:
     def __init__(self, answer: str | None) -> None:
         self.answer = answer
 
-    def generate(self, question: str, topic: str, documentation_hint: str, hits: list[SearchHit]):
+    def generate(
+        self,
+        question: str,
+        topic: str,
+        documentation_hint: str,
+        hits: list[SearchHit],
+        provider_id: str | None = None,
+        model_name: str | None = None,
+    ):
         if self.answer is None:
             return None, "extractive-fallback"
-        return self.answer, "openai:test-model"
+        from app.core.answer_format import StructuredAnswer
+
+        return StructuredAnswer(
+            summary=self.answer,
+            key_points=[self.answer],
+            caveats=[],
+            used_chunk_ids=[hits[0].chunk.chunk_id],
+        ), "openai:test-model"
 
 
 class GroundedAnswerGeneratorTest(unittest.TestCase):
@@ -37,6 +52,8 @@ class GroundedAnswerGeneratorTest(unittest.TestCase):
 
         self.assertEqual(result.answer_backend, "extractive-fallback")
         self.assertIn("FastAPI dependencies", result.answer)
+        self.assertTrue(result.summary.endswith("[fastapi-0001]"))
+        self.assertEqual(result.used_chunk_ids, ["fastapi-0001"])
 
     def test_prefers_llm_answer_when_available(self) -> None:
         hit = SearchHit(
@@ -59,7 +76,8 @@ class GroundedAnswerGeneratorTest(unittest.TestCase):
         result = generator.generate("RDB 和 AOF 怎么取舍？", [hit], "redis")
 
         self.assertEqual(result.answer_backend, "openai:test-model")
-        self.assertEqual(result.answer, "这是一个基于证据的回答。[redis-0001]")
+        self.assertEqual(result.summary, "这是一个基于证据的回答。[redis-0001]")
+        self.assertEqual(result.key_points, ["这是一个基于证据的回答。[redis-0001]"])
 
 
 if __name__ == "__main__":
