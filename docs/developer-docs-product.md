@@ -29,7 +29,7 @@
 - 使用 `topic` 元数据管理知识源
 - 混合检索：关键词 + 真实 dense embedding + cross-encoder rerank
 - 生成层：多 provider LLM + 本地 grounded fallback
-- 返回答案、置信度、文档提示、相关问题、引用片段和原始来源链接
+- 返回结构化答案、内联 citation、相关问题、引用片段和原始来源链接
 - 提供 REST API 与单页前端
 
 ## 4. 典型问题
@@ -39,6 +39,20 @@
 - “Redis 为什么同时启用 RDB 和 AOF？”
 - “为什么 Docker 某一层变了后面也要重建？”
 - “PostgreSQL 的 B-Tree 为什么适合范围查询？”
+
+当前内置 provider 示例：
+
+- OpenAI
+- Claude
+- DeepSeek
+- Groq
+- OpenRouter
+- Together
+- Moonshot Kimi
+- SiliconFlow
+- DashScope Qwen
+- Mistral
+- Perplexity
 
 ## 5. 后续扩展
 

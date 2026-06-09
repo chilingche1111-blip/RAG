@@ -14,8 +14,9 @@ class RAGServiceTest(unittest.TestCase):
         self.assertGreaterEqual(len(catalog), 5)
         self.assertGreaterEqual(len(suggestions), 1)
         self.assertIn("official_sources", catalog[0])
-        self.assertGreaterEqual(len(llm_catalog), 3)
+        self.assertGreaterEqual(len(llm_catalog), 8)
         self.assertEqual(llm_catalog[0]["provider_id"], "openai")
+        self.assertTrue(any(item["provider_id"] == "together" for item in llm_catalog))
 
     def test_query_returns_requested_topic_when_filtered(self) -> None:
         service = RAGService.from_directory("data/knowledge_base")

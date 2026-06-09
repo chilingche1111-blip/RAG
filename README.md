@@ -95,6 +95,12 @@
 - `DeepSeek`：OpenAI-compatible API
 - `Groq`：OpenAI-compatible API
 - `OpenRouter`：OpenAI-compatible API
+- `Together`：OpenAI-compatible API
+- `Moonshot Kimi`：OpenAI-compatible API
+- `SiliconFlow`：OpenAI-compatible API
+- `DashScope Qwen`：compatible-mode API
+- `Mistral`：chat completions API
+- `Perplexity`：chat completions API
 
 同时支持通过 `RAG_EXTRA_LLM_PROVIDERS_JSON` 增加更多 OpenAI-compatible provider。
 
@@ -129,6 +135,7 @@
 - 为什么命中这段内容
 - 对应来源是什么
 - 用户下一步还可以问什么
+- 点击 citation 后可以直接跳转并高亮对应证据卡
 
 ## 4. 技术架构
 
@@ -256,6 +263,15 @@ RAG/
 
 `GET /api/v1/llm/options`
 
+这个接口会返回：
+
+- `provider_id`
+- `provider_type`
+- `default_model`
+- `api_key_env`
+- `base_url`
+- `description`
+
 ### 获取索引状态
 
 `GET /api/v1/index/stats`
@@ -285,6 +301,8 @@ curl -X POST http://127.0.0.1:8000/api/v1/query \
   -d '{
     "question": "FastAPI 的依赖注入适合解决什么问题？",
     "topic": "fastapi",
+    "llm_provider": "openrouter",
+    "llm_model": "anthropic/claude-3.7-sonnet",
     "top_k": 3
   }'
 ```
@@ -344,6 +362,12 @@ export ANTHROPIC_API_KEY=your_anthropic_api_key
 export DEEPSEEK_API_KEY=your_deepseek_api_key
 export GROQ_API_KEY=your_groq_api_key
 export OPENROUTER_API_KEY=your_openrouter_api_key
+export TOGETHER_API_KEY=your_together_api_key
+export MOONSHOT_API_KEY=your_moonshot_api_key
+export SILICONFLOW_API_KEY=your_siliconflow_api_key
+export DASHSCOPE_API_KEY=your_dashscope_api_key
+export MISTRAL_API_KEY=your_mistral_api_key
+export PERPLEXITY_API_KEY=your_perplexity_api_key
 ```
 
 ### 8.2 启动服务
@@ -363,7 +387,26 @@ uvicorn app.main:app --reload
 python3 scripts/query_demo.py "Redis 的 RDB 和 AOF 应该怎样取舍？" --topic redis
 ```
 
-### 8.4 单元测试
+指定 provider 和模型：
+
+```bash
+python3 scripts/query_demo.py "FastAPI 的依赖注入适合解决什么问题？" \
+  --topic fastapi \
+  --llm-provider deepseek \
+  --llm-model deepseek-chat
+```
+
+### 8.4 Web 使用
+
+1. 启动 `uvicorn app.main:app --reload`
+2. 打开 `http://127.0.0.1:8000/`
+3. 输入问题
+4. 选择技术主题
+5. 选择 LLM provider，必要时覆盖模型名
+6. 提交查询
+7. 点击答案里的 `[chunk-id]` 跳到并高亮对应证据卡
+
+### 8.5 单元测试
 
 ```bash
 python3 -m unittest discover -s tests
@@ -396,6 +439,12 @@ python3 -m unittest discover -s tests
 - `DEEPSEEK_API_KEY`
 - `GROQ_API_KEY`
 - `OPENROUTER_API_KEY`
+- `TOGETHER_API_KEY`
+- `MOONSHOT_API_KEY`
+- `SILICONFLOW_API_KEY`
+- `DASHSCOPE_API_KEY`
+- `MISTRAL_API_KEY`
+- `PERPLEXITY_API_KEY`
 - `RAG_EXTRA_LLM_PROVIDERS_JSON`
 
 示例见：[.env.example](/Users/cii/RAG_PROJECT/.env.example)

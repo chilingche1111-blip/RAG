@@ -24,6 +24,42 @@ const documentationHint = document.getElementById("documentation-hint");
 const relatedQuestionList = document.getElementById("related-question-list");
 const citationList = document.getElementById("citation-list");
 
+function escapeHtml(text) {
+  return text
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function highlightCitationCard(chunkId) {
+  const card = document.getElementById(`citation-${chunkId}`);
+  if (!card) {
+    return;
+  }
+  card.scrollIntoView({ behavior: "smooth", block: "center" });
+  card.classList.add("citation-card-active");
+  window.setTimeout(() => card.classList.remove("citation-card-active"), 1800);
+}
+
+function renderRichText(text) {
+  const escaped = escapeHtml(text);
+  const withCode = escaped.replace(/`([^`]+)`/g, "<code>$1</code>");
+  const withCitations = withCode.replace(/\[([a-z0-9-]+)\]/gi, (_match, chunkId) => {
+    return `<button type="button" class="inline-citation" data-chunk-id="${chunkId}">[${chunkId}]</button>`;
+  });
+  return withCitations.replace(/\n/g, "<br />");
+}
+
+function bindCitationButtons(target) {
+  target.querySelectorAll(".inline-citation").forEach((button) => {
+    button.addEventListener("click", () => {
+      highlightCitationCard(button.dataset.chunkId);
+    });
+  });
+}
+
 async function fetchTopics() {
   const response = await fetch("/api/v1/topics");
   const topics = await response.json();
@@ -124,9 +160,10 @@ function renderList(target, items) {
   target.innerHTML = "";
   items.forEach((item) => {
     const li = document.createElement("li");
-    li.textContent = item;
+    li.innerHTML = renderRichText(item);
     target.appendChild(li);
   });
+  bindCitationButtons(target);
 }
 
 function renderResult(payload) {
@@ -138,8 +175,9 @@ function renderResult(payload) {
   confidenceBadge.textContent = `置信度：${payload.confidence_label}`;
   backendBadge.textContent = `生成后端：${payload.answer_backend}`;
   chunkUsage.textContent = `引用 Chunk：${payload.used_chunk_ids.join(", ") || "无"}`;
-  summaryText.textContent = payload.summary;
+  summaryText.innerHTML = renderRichText(payload.summary);
   documentationHint.textContent = payload.documentation_hint;
+  bindCitationButtons(summaryText);
 
   renderList(keyPointList, payload.key_points);
   renderList(caveatList, payload.caveats);
@@ -153,6 +191,7 @@ function renderResult(payload) {
     const rerank = chunk.rerank_score !== null ? ` · rerank ${chunk.rerank_score}` : "";
     const card = document.createElement("article");
     card.className = "citation-card";
+    card.id = `citation-${chunk.chunk_id}`;
     card.innerHTML = `
       <h5>${chunk.source_name}</h5>
       <p>${chunk.text}</p>
