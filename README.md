@@ -21,6 +21,49 @@
 - FastAPI API
 - Web 演示页面
 
+## 0.1 快速展示
+
+如果你要把这个项目发给面试官、同学或团队成员，建议直接展示这三个点：
+
+- 一个开发者技术文档问答入口，而不是通用聊天机器人
+- 答案带内联 citation，可跳转到证据片段和原始文档
+- 支持官方文档抓取、局部重建、评测和多 LLM provider 管理
+
+## 0.2 架构图
+
+```mermaid
+flowchart LR
+    A[Official Docs / Markdown Files] --> B[Doc Crawler + Frontmatter]
+    B --> C[Knowledge Base]
+    C --> D[Markdown Chunker]
+    D --> E[Hybrid Retriever]
+    E --> F[Dense Embedding Recall]
+    E --> G[Lexical Recall]
+    E --> H[Cross-Encoder Rerank]
+    H --> I[Grounded Answer Generator]
+    I --> J[Multi-Provider LLM Layer]
+    I --> K[Extractive Fallback]
+    J --> L[Structured Answer + Inline Citation]
+    K --> L
+    L --> M[FastAPI API + Web UI + Admin Console]
+```
+
+## 0.3 检索流程图
+
+```mermaid
+flowchart TD
+    Q[User Question] --> T[Topic Filter]
+    T --> L1[Lexical Scoring]
+    T --> L2[Dense Embedding Scoring]
+    L1 --> M[Merge Scores]
+    L2 --> M
+    M --> R[Candidate Recall]
+    R --> X[Cross-Encoder Rerank]
+    X --> E[Top-K Evidence Chunks]
+    E --> S[Structured Answer Generation]
+    S --> C[Inline Citation + Source Links]
+```
+
 ## 0. 简历写法建议
 
 如果你要把这个项目写进简历，建议重点写成“面向开发者场景的可落地智能问答产品”，而不是“做了一个 RAG Demo”。
@@ -48,6 +91,22 @@
 - 回答必须基于命中文档片段，不依赖自由发挥
 - 返回引用片段和原始来源链接，方便继续深挖
 - 通过 API 对外服务，便于二次集成
+
+## 1.1 演示问答示例
+
+输入问题：
+
+```text
+asyncio.create_task 和直接 await 有什么区别？
+```
+
+系统输出风格：
+
+- 先给出结论
+- 再列关键点和 caveats
+- 每个关键结论附带 `[chunk-id]`
+- 点击 citation 可直接高亮证据卡
+- 每条证据可跳转回官方原始文档
 
 ## 2. 当前知识库主题
 
@@ -206,6 +265,13 @@ Provider 运维能力：
 - 原生 HTML / CSS / JavaScript
 - 单页演示 UI
 
+### 4.4 部署
+
+- `Dockerfile`
+- `docker-compose.yml`
+- 单容器部署
+- 数据目录 volume 挂载
+
 ## 5. 目录结构
 
 ```text
@@ -223,6 +289,7 @@ RAG/
 │   └── knowledge_base/    # 示例知识库 / crawler 输出目录
 ├── docs/
 │   ├── developer-docs-product.md
+│   ├── deployment.md
 │   └── rag-system-plan.md
 ├── scripts/
 │   ├── evaluate_rag.py    # 自动评测 CLI
@@ -535,6 +602,33 @@ uvicorn app.main:app --reload
 - Web 页面：`http://127.0.0.1:8000/`
 - OpenAPI 文档：`http://127.0.0.1:8000/docs`
 
+### 8.3.1 Docker 运行
+
+```bash
+docker compose up --build
+```
+
+默认 Docker 配置会关闭 dense embeddings 和 reranker：
+
+- `RAG_ENABLE_EMBEDDINGS=0`
+- `RAG_ENABLE_RERANKER=0`
+
+这样可以避免容器首次构建时拉取 `torch` 与 `sentence-transformers` 的大体积依赖，更适合演示、简历项目和轻量部署。
+
+如果你需要完整的 dense retrieval 路径，建议优先使用本机 Python 环境安装 `requirements.txt`，或自行扩展 Docker 镜像依赖。
+
+如果你只想后台运行：
+
+```bash
+docker compose up -d --build
+```
+
+停止容器：
+
+```bash
+docker compose down
+```
+
 ### 8.4 命令行测试
 
 ```bash
@@ -668,12 +762,17 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 - `/api/v1/llm/health` 可返回 provider 配置状态
 - `/api/v1/docs/sources`、`/api/v1/docs/crawl`、`/api/v1/evaluation/run` 可正常返回
 - FastAPI 服务结构完整
+- `docker compose build`
+- `docker compose up -d`
+- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:8000/docs`
 
 说明：
 
 - 首次加载真实模型时会下载 Hugging Face 模型文件，耗时明显更长
 - 推荐使用 Python 3.11 + OpenSSL 环境；仓库同时保留了 `urllib3<2` 约束，避免 macOS 自带 Python 3.9 + `LibreSSL` 下出现兼容性 warning
 - 真实 LLM 生成层需要你提供对应 provider 的有效 API Key 才能完成联网调用
+- Docker 默认使用轻量依赖集，并关闭 dense embeddings / reranker；这条路径可以直接运行 Web UI、API、crawler、重建和评测
 
 ## 11. 后续扩展建议
 
@@ -689,4 +788,5 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 ## 12. 相关文档
 
 - [产品说明](docs/developer-docs-product.md)
+- [部署说明](docs/deployment.md)
 - [实施计划](docs/rag-system-plan.md)
