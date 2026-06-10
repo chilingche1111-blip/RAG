@@ -189,7 +189,7 @@ Provider 运维能力：
 
 ### 4.1 后端
 
-- Python 3.9+
+- Python 3.11+ recommended
 - FastAPI
 - Pydantic v2
 
@@ -464,10 +464,12 @@ curl -X POST http://127.0.0.1:8000/api/v1/query \
 ### 8.1 安装依赖
 
 ```bash
-python3 -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 ```
+
+如果你的机器还没有 `python3.11`，建议优先安装 Python 3.11 再创建虚拟环境。macOS 自带的 Python 3.9 仍可运行当前仓库，但不再是推荐开发环境。
 
 如果你想启用真实 LLM 生成，还需要配置：
 
@@ -670,7 +672,7 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 说明：
 
 - 首次加载真实模型时会下载 Hugging Face 模型文件，耗时明显更长
-- 本机 Python 使用 `LibreSSL` 时，`urllib3` 可能打印告警，但不影响当前功能运行
+- 推荐使用 Python 3.11 + OpenSSL 环境；仓库同时保留了 `urllib3<2` 约束，避免 macOS 自带 Python 3.9 + `LibreSSL` 下出现兼容性 warning
 - 真实 LLM 生成层需要你提供对应 provider 的有效 API Key 才能完成联网调用
 
 ## 11. 后续扩展建议
