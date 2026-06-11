@@ -33,8 +33,9 @@
 
 在线演示地址：
 
-- `待部署`
-- Railway 部署配置已完成，等待在平台侧完成首次发布
+- 首页：`https://rag-production-e5f7.up.railway.app/`
+- API 文档：`https://rag-production-e5f7.up.railway.app/docs`
+- 健康检查：`https://rag-production-e5f7.up.railway.app/health`
 
 ## 0.2 架构图
 
