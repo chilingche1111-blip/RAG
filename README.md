@@ -673,7 +673,7 @@ docker compose down
 - `RAG_ENABLE_RERANKER=0`
 - `RAG_ENABLE_LLM=1`
 - `RAG_LLM_PROVIDER=aicanapi`
-- `RAG_LLM_MODEL=chatgpt`
+- `RAG_LLM_MODEL=gpt-5.4mini`
 - 配置至少一个可用 provider key
 
 详细步骤见：[部署说明](docs/deployment.md)

@@ -13,7 +13,7 @@
 当前仓库的生产模板默认已经按 `AicanAPI` 预设：
 
 - `RAG_LLM_PROVIDER=aicanapi`
-- `RAG_LLM_MODEL=chatgpt`
+- `RAG_LLM_MODEL=gpt-5.4mini`
 - `AICANAPI_API_KEY`
 
 ### 1.1 Railway 推荐环境变量
@@ -22,7 +22,7 @@
 
 - `RAG_ENABLE_LLM=1`
 - `RAG_LLM_PROVIDER=aicanapi`
-- `RAG_LLM_MODEL=chatgpt`
+- `RAG_LLM_MODEL=gpt-5.4mini`
 - `AICANAPI_API_KEY`
 
 为了保证首版上线更稳定，推荐默认使用轻量模式：

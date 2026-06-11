@@ -125,7 +125,7 @@ DEFAULT_PROVIDER_OPTIONS: dict[str, LLMProviderOption] = {
         label="AicanAPI",
         provider_type="openai_compatible_chat",
         api_key_env="AICANAPI_API_KEY",
-        default_model="chatgpt",
+        default_model="gpt-5.4mini",
         base_url="https://ent.aicanapi.com/v1",
         description="AicanAPI OpenAI-compatible gateway.",
     ),
