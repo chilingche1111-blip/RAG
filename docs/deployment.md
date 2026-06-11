@@ -1,6 +1,56 @@
 # 部署说明
 
-## 1. 本地 Docker 部署
+## 1. Railway 部署
+
+仓库已经补齐 Railway 所需文件：
+
+- `railway.json`
+- `Dockerfile`
+- `.env.production.example`
+
+推荐直接使用 GitHub 仓库连接 Railway，新建项目后选择本仓库即可。
+
+### 1.1 Railway 推荐环境变量
+
+建议至少在 Railway 项目中配置：
+
+- `RAG_ENABLE_LLM=1`
+- `RAG_LLM_PROVIDER`
+- `RAG_LLM_MODEL`
+- 至少一个 provider API Key，例如 `OPENAI_API_KEY`
+
+为了保证首版上线更稳定，推荐默认使用轻量模式：
+
+- `RAG_ENABLE_EMBEDDINGS=0`
+- `RAG_ENABLE_RERANKER=0`
+
+生产环境变量模板见：
+
+- `.env.production.example`
+
+### 1.2 Railway 部署步骤
+
+1. 登录 Railway 控制台
+2. 选择 `New Project`
+3. 选择 `Deploy from GitHub repo`
+4. 连接 `chilingche1111-blip/RAG`
+5. 在 Variables 中填入 `.env.production.example` 里的关键变量
+6. 首次部署成功后访问：
+   - `/`
+   - `/docs`
+   - `/health`
+7. 如需继续初始化数据，可再调用：
+   - `POST /api/v1/index/rebuild`
+   - `POST /api/v1/docs/crawl`
+   - `POST /api/v1/evaluation/run`
+
+### 1.3 Railway 说明
+
+- `railway.json` 已配置 `healthcheckPath=/health`
+- 容器会自动监听 Railway 注入的 `PORT`
+- 默认 `Dockerfile` 使用轻量依赖，更适合在线演示和降低冷启动成本
+
+## 2. 本地 Docker 部署
 
 ### 1.1 轻量模式
 
@@ -47,7 +97,7 @@ docker compose -f docker-compose.yml -f docker-compose.full.yml up --build
 docker compose down
 ```
 
-## 2. 环境变量
+## 3. 环境变量
 
 至少建议配置：
 
@@ -57,7 +107,7 @@ docker compose down
 
 如果只想跑本地 extractive fallback，可以不配置任何 LLM Key。
 
-## 3. 容器内数据目录
+## 4. 容器内数据目录
 
 容器默认挂载：
 
@@ -66,7 +116,7 @@ docker compose down
 
 这样抓取的文档、评测集和知识库文件会保留在宿主机。
 
-## 4. 常见操作
+## 5. 常见操作
 
 抓取官方文档：
 
@@ -90,7 +140,7 @@ docker compose exec devdocs-qa python scripts/evaluate_rag.py --limit 5
 
 完整模型模式下，命令保持不变，只是启动时改为带 `docker-compose.full.yml` 的 compose 组合。
 
-## 5. 云端部署建议
+## 6. 云端部署建议
 
 如果要把这个项目作为简历展示项目，建议优先部署到支持 Docker 的平台：
 

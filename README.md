@@ -2,6 +2,8 @@
 
 一个面向开发者的技术文档智能问答系统，基于公开技术文档构建知识库，支持混合检索、证据引用和 API 问答服务。
 
+![DevDocs QA UI](README.assets/devdocs-qa-ui.png)
+
 当前仓库提供的是一个可运行的 RAG MVP，同时保留了继续扩展到正式产品的结构：
 
 - 文档 ingestion
@@ -28,6 +30,11 @@
 - 一个开发者技术文档问答入口，而不是通用聊天机器人
 - 答案带内联 citation，可跳转到证据片段和原始文档
 - 支持官方文档抓取、局部重建、评测和多 LLM provider 管理
+
+在线演示地址：
+
+- `待部署`
+- Railway 部署配置已完成，等待在平台侧完成首次发布
 
 ## 0.2 架构图
 
@@ -268,7 +275,10 @@ Provider 运维能力：
 ### 4.4 部署
 
 - `Dockerfile`
+- `Dockerfile.full`
 - `docker-compose.yml`
+- `docker-compose.full.yml`
+- `railway.json`
 - 单容器部署
 - 数据目录 volume 挂载
 
@@ -644,6 +654,27 @@ docker compose up -d --build
 docker compose down
 ```
 
+### 8.3.2 Railway 部署
+
+仓库已补齐 Railway 配置，可直接用 GitHub 仓库创建项目。
+
+关键文件：
+
+- `railway.json`
+- `.env.production.example`
+- `Dockerfile`
+
+推荐首版线上环境变量：
+
+- `RAG_ENABLE_EMBEDDINGS=0`
+- `RAG_ENABLE_RERANKER=0`
+- `RAG_ENABLE_LLM=1`
+- `RAG_LLM_PROVIDER=openai`
+- `RAG_LLM_MODEL=gpt-5.4-mini`
+- 配置至少一个可用 provider key
+
+详细步骤见：[部署说明](docs/deployment.md)
+
 ### 8.4 命令行测试
 
 ```bash
@@ -709,6 +740,8 @@ python3 -m unittest discover -s tests
 - `Dockerfile.full`：完整运行时，适合展示 dense retrieval / rerank
 - `docker-compose.yml`：默认轻量模式
 - `docker-compose.full.yml`：完整模式覆盖配置
+- `railway.json`：Railway 部署配置
+- `.env.production.example`：生产环境变量模板
 
 ## 9. 环境变量配置
 
@@ -789,6 +822,7 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 - `http://127.0.0.1:8000/`
 - `http://127.0.0.1:8000/docs`
 - `docker compose -f docker-compose.yml -f docker-compose.full.yml config`
+- Railway 部署所需 `PORT` 监听兼容已补齐
 
 说明：
 
