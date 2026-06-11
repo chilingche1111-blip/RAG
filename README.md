@@ -604,6 +604,8 @@ uvicorn app.main:app --reload
 
 ### 8.3.1 Docker 运行
 
+轻量模式：
+
 ```bash
 docker compose up --build
 ```
@@ -615,7 +617,20 @@ docker compose up --build
 
 这样可以避免容器首次构建时拉取 `torch` 与 `sentence-transformers` 的大体积依赖，更适合演示、简历项目和轻量部署。
 
-如果你需要完整的 dense retrieval 路径，建议优先使用本机 Python 环境安装 `requirements.txt`，或自行扩展 Docker 镜像依赖。
+完整模型模式：
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.full.yml up --build
+```
+
+完整模式会：
+
+- 改用 `Dockerfile.full`
+- 安装完整 `requirements.txt`
+- 开启 `RAG_ENABLE_EMBEDDINGS=1`
+- 开启 `RAG_ENABLE_RERANKER=1`
+
+如果你需要在容器里完整演示 dense retrieval + rerank，优先使用这个模式。
 
 如果你只想后台运行：
 
@@ -687,6 +702,13 @@ python3 scripts/evaluate_rag.py --topic fastapi --limit 4
 ```bash
 python3 -m unittest discover -s tests
 ```
+
+### 8.8 Docker 文件说明
+
+- `Dockerfile`：轻量运行时，适合快速演示
+- `Dockerfile.full`：完整运行时，适合展示 dense retrieval / rerank
+- `docker-compose.yml`：默认轻量模式
+- `docker-compose.full.yml`：完整模式覆盖配置
 
 ## 9. 环境变量配置
 
@@ -766,6 +788,7 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 - `docker compose up -d`
 - `http://127.0.0.1:8000/`
 - `http://127.0.0.1:8000/docs`
+- `docker compose -f docker-compose.yml -f docker-compose.full.yml config`
 
 说明：
 
@@ -773,6 +796,7 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 - 推荐使用 Python 3.11 + OpenSSL 环境；仓库同时保留了 `urllib3<2` 约束，避免 macOS 自带 Python 3.9 + `LibreSSL` 下出现兼容性 warning
 - 真实 LLM 生成层需要你提供对应 provider 的有效 API Key 才能完成联网调用
 - Docker 默认使用轻量依赖集，并关闭 dense embeddings / reranker；这条路径可以直接运行 Web UI、API、crawler、重建和评测
+- 仓库同时提供 `Dockerfile.full` + `docker-compose.full.yml`，用于容器内完整 dense retrieval 路径
 
 ## 11. 后续扩展建议
 

@@ -1,0 +1,7 @@
+services:
+  devdocs-qa:
+    build:
+      dockerfile: Dockerfile.full
+    environment:
+      RAG_ENABLE_EMBEDDINGS: "1"
+      RAG_ENABLE_RERANKER: "1"
