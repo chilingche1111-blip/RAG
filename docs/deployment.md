@@ -10,14 +10,20 @@
 
 推荐直接使用 GitHub 仓库连接 Railway，新建项目后选择本仓库即可。
 
+当前仓库的生产模板默认已经按 `AicanAPI` 预设：
+
+- `RAG_LLM_PROVIDER=aicanapi`
+- `RAG_LLM_MODEL=chatgpt`
+- `AICANAPI_API_KEY`
+
 ### 1.1 Railway 推荐环境变量
 
 建议至少在 Railway 项目中配置：
 
 - `RAG_ENABLE_LLM=1`
-- `RAG_LLM_PROVIDER`
-- `RAG_LLM_MODEL`
-- 至少一个 provider API Key，例如 `OPENAI_API_KEY`
+- `RAG_LLM_PROVIDER=aicanapi`
+- `RAG_LLM_MODEL=chatgpt`
+- `AICANAPI_API_KEY`
 
 为了保证首版上线更稳定，推荐默认使用轻量模式：
 
@@ -103,7 +109,7 @@ docker compose down
 
 - `RAG_LLM_PROVIDER`
 - `RAG_LLM_MODEL`
-- `OPENAI_API_KEY` 或其他 provider key
+- `OPENAI_API_KEY`、`AICANAPI_API_KEY` 或其他 provider key
 
 如果只想跑本地 extractive fallback，可以不配置任何 LLM Key。
 

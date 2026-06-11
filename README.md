@@ -79,7 +79,7 @@ flowchart TD
 更推荐的表达方向：
 
 - 基于公开技术文档构建 developer-facing RAG QA system，支持混合检索、结构化答案和证据引用
-- 设计多 provider LLM generation layer，兼容 OpenAI、Claude、DeepSeek、Groq、OpenRouter、Together、Qwen、Mistral、Perplexity 等主流模型接入
+- 设计多 provider LLM generation layer，兼容 OpenAI、Claude、DeepSeek、Groq、OpenRouter、Together、Qwen、Mistral、Perplexity、AicanAPI 等主流模型接入
 - 实现官方文档抓取、增量同步、局部索引重建、自动评测和 API/Web UI 闭环，具备真实产品化扩展基础
 
 ## 1. 项目定位
@@ -195,6 +195,7 @@ asyncio.create_task 和直接 await 有什么区别？
 - `DashScope Qwen`：compatible-mode API
 - `Mistral`：chat completions API
 - `Perplexity`：chat completions API
+- `AicanAPI`：OpenAI-compatible API
 
 同时支持通过 `RAG_EXTRA_LLM_PROVIDERS_JSON` 增加更多 OpenAI-compatible provider。
 
@@ -568,6 +569,7 @@ export SILICONFLOW_API_KEY=your_siliconflow_api_key
 export DASHSCOPE_API_KEY=your_dashscope_api_key
 export MISTRAL_API_KEY=your_mistral_api_key
 export PERPLEXITY_API_KEY=your_perplexity_api_key
+export AICANAPI_API_KEY=your_aicanapi_api_key
 ```
 
 ### 8.2 抓取官方文档
@@ -670,8 +672,8 @@ docker compose down
 - `RAG_ENABLE_EMBEDDINGS=0`
 - `RAG_ENABLE_RERANKER=0`
 - `RAG_ENABLE_LLM=1`
-- `RAG_LLM_PROVIDER=openai`
-- `RAG_LLM_MODEL=gpt-5.4-mini`
+- `RAG_LLM_PROVIDER=aicanapi`
+- `RAG_LLM_MODEL=chatgpt`
 - 配置至少一个可用 provider key
 
 详细步骤见：[部署说明](docs/deployment.md)
@@ -783,6 +785,7 @@ python3 -m unittest discover -s tests
 - `DASHSCOPE_API_KEY`
 - `MISTRAL_API_KEY`
 - `PERPLEXITY_API_KEY`
+- `AICANAPI_API_KEY`
 - `RAG_EXTRA_LLM_PROVIDERS_JSON`
 
 示例见：[.env.example](/Users/cii/RAG_PROJECT/.env.example)
