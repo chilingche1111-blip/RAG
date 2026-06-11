@@ -31,6 +31,12 @@
 - 答案带内联 citation，可跳转到证据片段和原始文档
 - 支持官方文档抓取、局部重建、评测和多 LLM provider 管理
 
+当前最推荐的展示方式：
+
+- 本地启动 Web UI 做实时演示
+- 配合 README 截图、架构图和 API 文档说明项目能力
+- 在面试或简历场景里重点强调“可验证回答 + 引用追踪 + 开发者文档场景”
+
 ## 0.2 架构图
 
 ```mermaid
@@ -75,6 +81,8 @@ flowchart TD
 - 基于公开技术文档构建 developer-facing RAG QA system，支持混合检索、结构化答案和证据引用
 - 设计多 provider LLM generation layer，兼容 OpenAI、Claude、DeepSeek、Groq、OpenRouter、Together、Qwen、Mistral、Perplexity 等主流模型接入
 - 实现官方文档抓取、增量同步、局部索引重建、自动评测和 API/Web UI 闭环，具备真实产品化扩展基础
+
+可直接复用的简历表达见：[简历描述模板](docs/resume-project-writeup.md)
 
 ## 1. 项目定位
 
@@ -606,6 +614,8 @@ uvicorn app.main:app --reload
 - Web 页面：`http://127.0.0.1:8000/`
 - OpenAPI 文档：`http://127.0.0.1:8000/docs`
 
+如果你是为了简历展示，推荐优先使用这条本地运行方式，最稳定也最容易控制演示效果。
+
 ### 8.3.1 Docker 运行
 
 轻量模式：
@@ -816,4 +826,5 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 ## 12. 相关文档
 
 - [产品说明](docs/developer-docs-product.md)
+- [简历描述模板](docs/resume-project-writeup.md)
 - [实施计划](docs/rag-system-plan.md)
