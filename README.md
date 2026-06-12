@@ -84,6 +84,8 @@ flowchart TD
 
 可直接复用的简历表达见：[简历描述模板](docs/resume-project-writeup.md)
 
+Demo 展示前检查见：[Demo Checklist](docs/demo-checklist.md)
+
 ## 1. 项目定位
 
 这个项目不是泛聊天机器人，而是一个更适合真实落地的开发者文档问答系统。
@@ -538,7 +540,46 @@ curl -X POST http://127.0.0.1:8000/api/v1/query \
 }
 ```
 
+如果你没有配置任何 LLM key，系统会自动回退到 grounded extractive answer。一个更贴近本地 Demo 的响应示例如下：
+
+```json
+{
+  "question": "Docker 构建缓存是怎么工作的？",
+  "summary": "Docker builds images layer by layer. [build-cache-0001]",
+  "answer_backend": "extractive-fallback",
+  "used_chunk_ids": ["build-cache-0001"],
+  "citations": [
+    {
+      "chunk_id": "build-cache-0001",
+      "source_name": "Docker Build Cache",
+      "source_url": "https://docs.docker.com/build/cache/"
+    }
+  ]
+}
+```
+
 ## 8. 本地运行
+
+### 8.0 3 分钟 Demo 路径
+
+如果你只是为了面试或简历展示，推荐优先走这条最短路径：
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export RAG_ENABLE_EMBEDDINGS=0
+export RAG_ENABLE_RERANKER=0
+export RAG_ENABLE_LLM=0
+uvicorn app.main:app --reload
+```
+
+然后打开：
+
+- `http://127.0.0.1:8000/`
+- `http://127.0.0.1:8000/docs`
+
+这条路径不依赖任何模型 key，最适合稳定演示 citation、检索结果、知识库结构和 Web UI。
 
 ### 8.1 安装依赖
 
@@ -826,5 +867,6 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 ## 12. 相关文档
 
 - [产品说明](docs/developer-docs-product.md)
+- [Demo Checklist](docs/demo-checklist.md)
 - [简历描述模板](docs/resume-project-writeup.md)
 - [实施计划](docs/rag-system-plan.md)
