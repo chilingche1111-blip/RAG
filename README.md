@@ -1,10 +1,63 @@
 # DevDocs QA
 
-一个面向开发者的技术文档智能问答系统，基于公开技术文档构建知识库，支持混合检索、证据引用和 API 问答服务。
+一个面向开发者技术文档场景的 RAG 智能问答系统。  
+它基于公开官方文档构建知识库，支持混合检索、结构化回答、证据引用和 API / Web 演示。
 
 ![DevDocs QA UI](README.assets/devdocs-qa-ui.png)
 
-当前仓库提供的是一个可运行的 RAG MVP，同时保留了继续扩展到正式产品的结构：
+## 0.1 项目亮点
+
+这个仓库最适合作为：
+
+- 本地可演示的 RAG Demo
+- 简历里的 developer-facing AI 项目
+- 面试时展示检索、引用和问答链路的作品集
+
+相比“通用聊天机器人”，这个项目更强调：
+
+- 明确场景：开发者技术文档问答
+- 明确边界：回答必须基于命中的文档证据
+- 明确可解释性：返回 citation、来源链接和相关问题
+
+## 0.2 3 分钟启动
+
+如果你只是为了演示，最推荐先跑这条稳定路径：
+
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+export RAG_ENABLE_EMBEDDINGS=0
+export RAG_ENABLE_RERANKER=0
+export RAG_ENABLE_LLM=0
+uvicorn app.main:app --reload
+```
+
+启动后访问：
+
+- Web UI：`http://127.0.0.1:8000/`
+- API Docs：`http://127.0.0.1:8000/docs`
+
+这条路径不依赖任何模型 key，最适合稳定展示检索、引用、知识库结构和前端交互。
+
+## 0.3 你能展示什么
+
+如果你要把这个项目发给面试官、同学或团队成员，最值得展示的是这三个点：
+
+- 一个开发者技术文档问答入口，而不是通用聊天机器人
+- 答案带内联 citation，可跳转到证据片段和原始文档
+- 支持官方文档抓取、局部重建、评测和多 LLM provider 管理
+
+## 0.4 仓库导航
+
+- [Demo Checklist](docs/demo-checklist.md)
+- [简历描述模板](docs/resume-project-writeup.md)
+- [产品说明](docs/developer-docs-product.md)
+- [实施计划](docs/rag-system-plan.md)
+
+## 0.5 当前能力概览
+
+当前仓库已经具备完整 Demo 闭环：
 
 - 文档 ingestion
 - 官方文档 crawler
@@ -23,21 +76,7 @@
 - FastAPI API
 - Web 演示页面
 
-## 0.1 快速展示
-
-如果你要把这个项目发给面试官、同学或团队成员，建议直接展示这三个点：
-
-- 一个开发者技术文档问答入口，而不是通用聊天机器人
-- 答案带内联 citation，可跳转到证据片段和原始文档
-- 支持官方文档抓取、局部重建、评测和多 LLM provider 管理
-
-当前最推荐的展示方式：
-
-- 本地启动 Web UI 做实时演示
-- 配合 README 截图、架构图和 API 文档说明项目能力
-- 在面试或简历场景里重点强调“可验证回答 + 引用追踪 + 开发者文档场景”
-
-## 0.2 架构图
+## 0.6 架构图
 
 ```mermaid
 flowchart LR
@@ -56,7 +95,7 @@ flowchart LR
     L --> M[FastAPI API + Web UI + Admin Console]
 ```
 
-## 0.3 检索流程图
+## 0.7 检索流程图
 
 ```mermaid
 flowchart TD
@@ -72,7 +111,7 @@ flowchart TD
     S --> C[Inline Citation + Source Links]
 ```
 
-## 0. 简历写法建议
+## 0.8 简历写法建议
 
 如果你要把这个项目写进简历，建议重点写成“面向开发者场景的可落地智能问答产品”，而不是“做了一个 RAG Demo”。
 
@@ -83,8 +122,6 @@ flowchart TD
 - 实现官方文档抓取、增量同步、局部索引重建、自动评测和 API/Web UI 闭环，具备真实产品化扩展基础
 
 可直接复用的简历表达见：[简历描述模板](docs/resume-project-writeup.md)
-
-Demo 展示前检查见：[Demo Checklist](docs/demo-checklist.md)
 
 ## 1. 项目定位
 
