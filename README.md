@@ -7,17 +7,12 @@
 
 ## 0.1 项目亮点
 
-这个仓库最适合作为：
+这是一个更适合展示工程能力的 RAG Demo，而不是通用聊天壳子。
 
-- 本地可演示的 RAG Demo
-- 简历里的 developer-facing AI 项目
-- 面试时展示检索、引用和问答链路的作品集
-
-相比“通用聊天机器人”，这个项目更强调：
-
-- 明确场景：开发者技术文档问答
-- 明确边界：回答必须基于命中的文档证据
-- 明确可解释性：返回 citation、来源链接和相关问题
+- 场景明确：开发者技术文档问答
+- 回答可验证：必须基于命中的文档 chunk
+- 结果可解释：返回 citation、来源链接和相关问题
+- 演示稳定：无模型 key 时也能走 grounded fallback
 
 ## 0.2 3 分钟启动
 
@@ -42,7 +37,7 @@ uvicorn app.main:app --reload
 
 ## 0.3 你能展示什么
 
-如果你要把这个项目发给面试官、同学或团队成员，最值得展示的是这三个点：
+最值得展示的是这三个点：
 
 - 一个开发者技术文档问答入口，而不是通用聊天机器人
 - 答案带内联 citation，可跳转到证据片段和原始文档
@@ -76,7 +71,14 @@ uvicorn app.main:app --reload
 - FastAPI API
 - Web 演示页面
 
-## 0.6 架构图
+## 0.6 适用场景
+
+- 简历项目展示
+- 面试时本地实时演示
+- 作品集中的 developer-facing AI 项目
+- 讲解 RAG 检索、引用与问答链路的教学样例
+
+## 0.7 架构图
 
 ```mermaid
 flowchart LR
@@ -95,7 +97,7 @@ flowchart LR
     L --> M[FastAPI API + Web UI + Admin Console]
 ```
 
-## 0.7 检索流程图
+## 0.8 检索流程图
 
 ```mermaid
 flowchart TD
@@ -111,7 +113,7 @@ flowchart TD
     S --> C[Inline Citation + Source Links]
 ```
 
-## 0.8 简历写法建议
+## 0.9 简历写法建议
 
 如果你要把这个项目写进简历，建议重点写成“面向开发者场景的可落地智能问答产品”，而不是“做了一个 RAG Demo”。
 
@@ -123,7 +125,7 @@ flowchart TD
 
 可直接复用的简历表达见：[简历描述模板](docs/resume-project-writeup.md)
 
-## 1. 项目定位
+## 1. 项目说明
 
 这个项目不是泛聊天机器人，而是一个更适合真实落地的开发者文档问答系统。
 
