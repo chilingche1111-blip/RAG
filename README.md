@@ -3,18 +3,24 @@
 一个面向开发者技术文档场景的 RAG 智能问答系统。  
 它基于公开官方文档构建知识库，支持混合检索、结构化回答、证据引用和 API / Web 演示。
 
-![DevDocs QA UI](README.assets/devdocs-qa-ui.png)
+`Developer Docs QA` · `Hybrid Retrieval` · `Inline Citation`
 
-## 0.1 项目亮点
+适合作为：
 
-这是一个更适合展示工程能力的 RAG Demo，而不是通用聊天壳子。
+- 本地可演示的 RAG Demo
+- 简历里的 developer-facing AI 项目
+- 面试时展示检索、引用和问答链路的作品集
+
+这个项目最值得强调的不是“会聊天”，而是：
 
 - 场景明确：开发者技术文档问答
 - 回答可验证：必须基于命中的文档 chunk
 - 结果可解释：返回 citation、来源链接和相关问题
 - 演示稳定：无模型 key 时也能走 grounded fallback
 
-## 0.2 3 分钟启动
+![DevDocs QA UI](README.assets/devdocs-qa-ui.png)
+
+## 0.1 3 分钟启动
 
 如果你只是为了演示，最推荐先跑这条稳定路径：
 
@@ -35,7 +41,7 @@ uvicorn app.main:app --reload
 
 这条路径不依赖任何模型 key，最适合稳定展示检索、引用、知识库结构和前端交互。
 
-## 0.3 你能展示什么
+## 0.2 你能展示什么
 
 最值得展示的是这三个点：
 
@@ -43,14 +49,14 @@ uvicorn app.main:app --reload
 - 答案带内联 citation，可跳转到证据片段和原始文档
 - 支持官方文档抓取、局部重建、评测和多 LLM provider 管理
 
-## 0.4 仓库导航
+## 0.3 仓库导航
 
 - [Demo Checklist](docs/demo-checklist.md)
 - [简历描述模板](docs/resume-project-writeup.md)
 - [产品说明](docs/developer-docs-product.md)
 - [实施计划](docs/rag-system-plan.md)
 
-## 0.5 当前能力概览
+## 0.4 当前能力概览
 
 当前仓库已经具备完整 Demo 闭环：
 
@@ -71,14 +77,14 @@ uvicorn app.main:app --reload
 - FastAPI API
 - Web 演示页面
 
-## 0.6 适用场景
+## 0.5 适用场景
 
 - 简历项目展示
 - 面试时本地实时演示
 - 作品集中的 developer-facing AI 项目
 - 讲解 RAG 检索、引用与问答链路的教学样例
 
-## 0.7 架构图
+## 0.6 架构图
 
 ```mermaid
 flowchart LR
@@ -97,7 +103,7 @@ flowchart LR
     L --> M[FastAPI API + Web UI + Admin Console]
 ```
 
-## 0.8 检索流程图
+## 0.7 检索流程图
 
 ```mermaid
 flowchart TD
@@ -113,7 +119,7 @@ flowchart TD
     S --> C[Inline Citation + Source Links]
 ```
 
-## 0.9 简历写法建议
+## 0.8 简历写法建议
 
 如果你要把这个项目写进简历，建议重点写成“面向开发者场景的可落地智能问答产品”，而不是“做了一个 RAG Demo”。
 
