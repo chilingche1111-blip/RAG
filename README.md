@@ -51,7 +51,7 @@ uvicorn app.main:app --reload
 
 ## Repository Guide
 
-- [Demo Checklist](docs/demo-checklist.md)
+- [Local Demo Checklist](docs/local-demo-checklist.md)
 - [产品说明](docs/developer-docs-product.md)
 - [实施计划](docs/rag-system-plan.md)
 
@@ -899,5 +899,6 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 ## 12. 相关文档
 
 - [产品说明](docs/developer-docs-product.md)
-- [Demo Checklist](docs/demo-checklist.md)
+- [Local Demo Checklist](docs/local-demo-checklist.md)
+- [项目描述模板](docs/project-summary-templates.md)
 - [实施计划](docs/rag-system-plan.md)
