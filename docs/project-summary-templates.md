@@ -10,7 +10,7 @@
 
 - 构建开发者文档问答系统，基于公开技术文档建立知识库，支持 FastAPI、asyncio、Redis、PostgreSQL、Docker 等主题问答
 - 设计 Hybrid Retrieval 链路，融合关键词检索、dense embedding 召回与 cross-encoder rerank，提升文档命中率与答案相关性
-- 实现结构化答案输出、citation 引用跳转、来源追踪、自动评测、官方文档抓取与局部索引重建，形成 API + Web UI 闭环
+- 实现结构化答案输出、citation 引用跳转、来源追踪、自动评测、官方文档抓取与局部索引重建，形成 API + Web UI 的完整使用链路
 
 ### 版本 B：偏工程实现
 
@@ -28,7 +28,7 @@
 
 可以按下面这条线介绍：
 
-1. 这是一个面向开发者技术文档场景的问答系统，而不是通用聊天机器人
+1. 这是一个面向开发者技术文档场景的问答系统
 2. 知识来源是公开官方文档，先抓取并沉淀成 Markdown，再做分块和索引
 3. 检索层采用 Hybrid Retrieval，结合 lexical、dense embedding 和 rerank
 4. 回答层优先走 LLM 结构化生成，没有可用模型时会回退到 grounded extractive answer
@@ -36,7 +36,7 @@
 
 ## 4. 可强调的特点
 
-- 不是单纯聊天工具，而是有明确场景边界的开发者文档助手
+- 面向开发者技术文档场景，问题边界清晰
 - 回答可追溯到证据 chunk，强调 grounded answer 而不是自由生成
 - 同时覆盖 crawler、index、retrieval、generation、evaluation、API、UI 全链路
 - 支持本地稳定运行，不依赖公网服务也能完成验证

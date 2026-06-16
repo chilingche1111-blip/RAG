@@ -13,7 +13,7 @@
   - `http://127.0.0.1:8000/`
   - `http://127.0.0.1:8000/docs`
 
-## 2. 推荐的 3 个示例问题
+## 2. 示例问题
 
 - `FastAPI 的依赖注入适合解决什么问题？`
 - `asyncio.create_task 和直接 await 有什么区别？`
@@ -25,22 +25,22 @@
 - 并发模型
 - 工程工具链
 
-## 3. 运行时可以关注什么
+## 3. 运行时可关注的内容
 
-- 这不是通用聊天机器人，而是开发者技术文档问答系统
+- 系统面向开发者技术文档问答场景
 - 回答必须基于命中的文档 chunk，而不是自由生成
 - 前端可直接展示 citation、source link、provider health、source registry
 - 即使不配置任何 LLM key，也能用 fallback 模式完成稳定运行
 
-## 4. 如果没有 API key，如何说明
+## 4. 如果没有 API key
 
-可以这样说明：
+可使用以下说明：
 
-“这个系统默认支持两层回答模式。配置了 provider key 时走结构化 LLM 生成；没有 key 时会自动回退到 grounded extractive answer，因此仍然可以稳定验证检索、引用和证据追踪能力。”
+“系统支持两层回答模式。配置了 provider key 时走结构化 LLM 生成；没有 key 时会自动回退到 grounded extractive answer，因此仍然可以验证检索、引用和证据追踪能力。”
 
 ## 5. 如果模型下载慢，怎么处理
 
-优先使用本地轻量模式：
+可先使用本地轻量模式：
 
 ```bash
 export RAG_ENABLE_EMBEDDINGS=0
@@ -48,8 +48,8 @@ export RAG_ENABLE_RERANKER=0
 export RAG_ENABLE_LLM=0
 ```
 
-这样可以避免首次运行时下载 `sentence-transformers` 或其他大模型依赖。
+这样可以减少首次运行时下载 `sentence-transformers` 或其他大模型依赖。
 
-## 6. 一句话总结
+## 6. 简短总结
 
-“这个项目重点不是做一个聊天壳子，而是把公开技术文档整理成一个可检索、可引用、可验证的问答系统，并且已经具备 API、Web UI、评测和运维闭环。”
+“该项目将公开技术文档整理为一个可检索、可引用、可验证的问答系统，并提供 API、Web UI、评测与运维能力。”

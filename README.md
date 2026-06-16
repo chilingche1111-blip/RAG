@@ -5,13 +5,13 @@
 
 `Developer Docs QA` · `Hybrid Retrieval` · `Inline Citation`
 
-适合的使用方式：
+## 适用场景
 
 - 本地可运行的技术文档问答系统
 - 团队内部知识检索原型
 - 开发者文档助手的基础实现
 
-这个项目最值得强调的不是“会聊天”，而是：
+## 核心特点
 
 - 场景明确：开发者技术文档问答
 - 回答可验证：必须基于命中的文档 chunk
@@ -20,9 +20,9 @@
 
 ![DevDocs QA UI](README.assets/devdocs-qa-ui.png)
 
-## Quick Start
+## 快速开始
 
-如果你想先快速运行一个稳定版本，推荐使用这条路径：
+以下命令可启动轻量配置：
 
 ```bash
 python3.11 -m venv .venv
@@ -39,25 +39,25 @@ uvicorn app.main:app --reload
 - Web UI：`http://127.0.0.1:8000/`
 - API Docs：`http://127.0.0.1:8000/docs`
 
-这条路径不依赖任何模型 key，适合先验证检索、引用、知识库结构和前端交互。
+这条路径不依赖任何模型 key，可用于验证检索、引用、知识库结构和前端交互。
 
-## Highlights
+## 项目概览
 
-这个仓库最核心的价值有三点：
+这个仓库的核心能力包括：
 
-- 一个开发者技术文档问答入口，而不是通用聊天机器人
+- 面向开发者文档的问答服务
 - 答案带内联 citation，可跳转到证据片段和原始文档
 - 支持官方文档抓取、局部重建、评测和多 LLM provider 管理
 
-## Repository Guide
+## 仓库说明
 
-- [Local Demo Checklist](docs/local-demo-checklist.md)
+- [本地演示清单](docs/local-demo-checklist.md)
 - [产品说明](docs/developer-docs-product.md)
 - [实施计划](docs/rag-system-plan.md)
 
-## Feature Overview
+## 功能概览
 
-当前仓库已经具备完整功能闭环：
+当前仓库已覆盖以下主要能力：
 
 - 文档 ingestion
 - 官方文档 crawler
@@ -74,16 +74,16 @@ uvicorn app.main:app --reload
 - 管理端 operator console
 - 引用与原始文档链接返回
 - FastAPI API
-- Web 演示页面
+- Web 演示界面
 
-## Use Cases
+## 使用场景
 
 - 团队内部技术文档问答
 - 公开官方文档聚合检索
 - API 门户 / 开发者中心文档助手
 - RAG 检索与引用链路的教学样例
 
-## Architecture
+## 系统架构
 
 ```mermaid
 flowchart LR
@@ -102,7 +102,7 @@ flowchart LR
     L --> M[FastAPI API + Web UI + Admin Console]
 ```
 
-## Retrieval Flow
+## 检索流程
 
 ```mermaid
 flowchart TD
@@ -118,9 +118,9 @@ flowchart TD
     S --> C[Inline Citation + Source Links]
 ```
 
-## Project Scope
+## 项目范围
 
-这个项目不是泛聊天机器人，而是一个更适合真实落地的开发者文档问答系统。
+这个项目聚焦于开发者技术文档问答场景。
 
 目标场景：
 
@@ -131,7 +131,7 @@ flowchart TD
 
 核心价值：
 
-- 把分散的文档内容收敛成统一问答入口
+- 把分散的文档内容收敛成统一检索与问答接口
 - 回答必须基于命中文档片段，不依赖自由发挥
 - 返回引用片段和原始来源链接，方便继续深挖
 - 通过 API 对外服务，便于二次集成
@@ -209,7 +209,7 @@ asyncio.create_task 和直接 await 有什么区别？
 - Embedding：`sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`
 - Reranker：`BAAI/bge-reranker-base`
 
-这套配置适合当前“中文提问 + 技术文档知识库”的演示场景。
+这套默认配置面向当前这组中文技术文档示例，可按需要替换模型。
 
 ### 3.3 问答输出
 
@@ -218,7 +218,7 @@ asyncio.create_task 和直接 await 有什么区别？
 1. 优先调用配置好的 LLM provider 生成结构化答案
 2. 如果没有配置对应 provider 的 API Key 或调用失败，则自动回退到本地 extractive grounded answer
 
-当前内置 provider：
+内置 provider：
 
 - `OpenAI`：Responses API
 - `Claude`：Anthropic Messages API
@@ -572,7 +572,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/query \
 }
 ```
 
-如果你没有配置任何 LLM key，系统会自动回退到 grounded extractive answer。一个更贴近本地 Demo 的响应示例如下：
+如果没有配置任何 LLM key，系统会自动回退到 grounded extractive answer。示例如下：
 
 ```json
 {
@@ -594,7 +594,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/query \
 
 ### 8.0 轻量启动路径
 
-如果你想先跑一个轻量、稳定的版本，推荐优先走这条最短路径：
+如果你想先运行轻量配置，可以使用以下路径：
 
 ```bash
 python3.11 -m venv .venv
@@ -611,7 +611,7 @@ uvicorn app.main:app --reload
 - `http://127.0.0.1:8000/`
 - `http://127.0.0.1:8000/docs`
 
-这条路径不依赖任何模型 key，适合先验证 citation、检索结果、知识库结构和 Web UI。
+这条路径不依赖任何模型 key，可用于验证 citation、检索结果、知识库结构和 Web UI。
 
 ### 8.1 安装依赖
 
@@ -621,7 +621,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-如果你的机器还没有 `python3.11`，建议优先安装 Python 3.11 再创建虚拟环境。macOS 自带的 Python 3.9 仍可运行当前仓库，但不再是推荐开发环境。
+如果本机还没有 `python3.11`，可以先安装 Python 3.11 再创建虚拟环境。macOS 自带的 Python 3.9 仍可运行当前仓库，但不作为默认开发环境。
 
 如果你想启用真实 LLM 生成，还需要配置：
 
@@ -687,7 +687,7 @@ uvicorn app.main:app --reload
 - Web 页面：`http://127.0.0.1:8000/`
 - OpenAPI 文档：`http://127.0.0.1:8000/docs`
 
-如果你优先关注稳定性，推荐优先使用这条本地运行方式。
+如果你只想先验证主链路，可以先使用这条本地运行方式。
 
 ### 8.3.1 Docker 运行
 
@@ -702,7 +702,7 @@ docker compose up --build
 - `RAG_ENABLE_EMBEDDINGS=0`
 - `RAG_ENABLE_RERANKER=0`
 
-这样可以避免容器首次构建时拉取 `torch` 与 `sentence-transformers` 的大体积依赖，更适合轻量部署和快速验证。
+这样可以减少容器首次构建时下载 `torch` 与 `sentence-transformers` 等大体积依赖。
 
 完整模型模式：
 
@@ -717,7 +717,7 @@ docker compose -f docker-compose.yml -f docker-compose.full.yml up --build
 - 开启 `RAG_ENABLE_EMBEDDINGS=1`
 - 开启 `RAG_ENABLE_RERANKER=1`
 
-如果你需要在容器里完整演示 dense retrieval + rerank，优先使用这个模式。
+如果你需要在容器里启用完整的 dense retrieval + rerank，可使用这个模式。
 
 如果你只想后台运行：
 
@@ -858,7 +858,7 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 
 ## 10. 已完成验证
 
-当前仓库已验证：
+已验证内容：
 
 - `python3 -m unittest discover -s tests`
 - `python3 -m compileall app tests scripts`
@@ -880,25 +880,25 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 说明：
 
 - 首次加载真实模型时会下载 Hugging Face 模型文件，耗时明显更长
-- 推荐使用 Python 3.11 + OpenSSL 环境；仓库同时保留了 `urllib3<2` 约束，避免 macOS 自带 Python 3.9 + `LibreSSL` 下出现兼容性 warning
+- 开发环境以 Python 3.11 + OpenSSL 组合为主；仓库同时保留了 `urllib3<2` 约束，避免 macOS 自带 Python 3.9 + `LibreSSL` 下出现兼容性 warning
 - 真实 LLM 生成层需要你提供对应 provider 的有效 API Key 才能完成联网调用
 - Docker 默认使用轻量依赖集，并关闭 dense embeddings / reranker；这条路径可以直接运行 Web UI、API、crawler、重建和评测
 - 仓库同时提供 `Dockerfile.full` + `docker-compose.full.yml`，用于容器内完整 dense retrieval 路径
 
-## 11. 后续扩展建议
+## 11. 后续扩展方向
 
-最值得继续做的方向：
+后续可以继续推进的方向：
 
 1. 增加定时抓取、增量更新和去重策略
 2. 增加更大规模的检索评测集与 answer quality benchmark
 3. 支持代码片段级检索和答案中的代码高亮
 4. 增加登录、团队隔离和私有知识库权限控制
-5. 增加反馈闭环，把 bad case 回流到评测与 prompt 版本管理
+5. 补充问题反馈与评测回流机制，持续维护 prompt 与基准集
 6. 支持多知识源路由，例如官方文档、内部 ADR、SDK API Reference 联合问答
 
 ## 12. 相关文档
 
 - [产品说明](docs/developer-docs-product.md)
-- [Local Demo Checklist](docs/local-demo-checklist.md)
+- [本地演示清单](docs/local-demo-checklist.md)
 - [项目描述模板](docs/project-summary-templates.md)
 - [实施计划](docs/rag-system-plan.md)
