@@ -52,6 +52,7 @@ uvicorn app.main:app --reload
 ## 仓库说明
 
 - [使用说明书](docs/usage-manual.md)
+- [5 分钟 Demo 流程](docs/demo-runbook.md)
 - [本地演示清单](docs/local-demo-checklist.md)
 - [产品说明](docs/developer-docs-product.md)
 - [实施计划](docs/rag-system-plan.md)
@@ -900,6 +901,7 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 ## 12. 相关文档
 
 - [使用说明书](docs/usage-manual.md)
+- [5 分钟 Demo 流程](docs/demo-runbook.md)
 - [产品说明](docs/developer-docs-product.md)
 - [本地演示清单](docs/local-demo-checklist.md)
 - [项目描述模板](docs/project-summary-templates.md)
