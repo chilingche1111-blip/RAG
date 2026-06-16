@@ -5,11 +5,11 @@
 
 `Developer Docs QA` · `Hybrid Retrieval` · `Inline Citation`
 
-适合作为：
+适合的使用方式：
 
-- 本地可演示的 RAG Demo
-- 简历里的 developer-facing AI 项目
-- 面试时展示检索、引用和问答链路的作品集
+- 本地可运行的技术文档问答系统
+- 团队内部知识检索原型
+- 开发者文档助手的基础实现
 
 这个项目最值得强调的不是“会聊天”，而是：
 
@@ -20,9 +20,9 @@
 
 ![DevDocs QA UI](README.assets/devdocs-qa-ui.png)
 
-## 0.1 3 分钟启动
+## Quick Start
 
-如果你只是为了演示，最推荐先跑这条稳定路径：
+如果你想先快速运行一个稳定版本，推荐使用这条路径：
 
 ```bash
 python3.11 -m venv .venv
@@ -39,26 +39,25 @@ uvicorn app.main:app --reload
 - Web UI：`http://127.0.0.1:8000/`
 - API Docs：`http://127.0.0.1:8000/docs`
 
-这条路径不依赖任何模型 key，最适合稳定展示检索、引用、知识库结构和前端交互。
+这条路径不依赖任何模型 key，适合先验证检索、引用、知识库结构和前端交互。
 
-## 0.2 你能展示什么
+## Highlights
 
-最值得展示的是这三个点：
+这个仓库最核心的价值有三点：
 
 - 一个开发者技术文档问答入口，而不是通用聊天机器人
 - 答案带内联 citation，可跳转到证据片段和原始文档
 - 支持官方文档抓取、局部重建、评测和多 LLM provider 管理
 
-## 0.3 仓库导航
+## Repository Guide
 
 - [Demo Checklist](docs/demo-checklist.md)
-- [简历描述模板](docs/resume-project-writeup.md)
 - [产品说明](docs/developer-docs-product.md)
 - [实施计划](docs/rag-system-plan.md)
 
-## 0.4 当前能力概览
+## Feature Overview
 
-当前仓库已经具备完整 Demo 闭环：
+当前仓库已经具备完整功能闭环：
 
 - 文档 ingestion
 - 官方文档 crawler
@@ -77,14 +76,14 @@ uvicorn app.main:app --reload
 - FastAPI API
 - Web 演示页面
 
-## 0.5 适用场景
+## Use Cases
 
-- 简历项目展示
-- 面试时本地实时演示
-- 作品集中的 developer-facing AI 项目
-- 讲解 RAG 检索、引用与问答链路的教学样例
+- 团队内部技术文档问答
+- 公开官方文档聚合检索
+- API 门户 / 开发者中心文档助手
+- RAG 检索与引用链路的教学样例
 
-## 0.6 架构图
+## Architecture
 
 ```mermaid
 flowchart LR
@@ -103,7 +102,7 @@ flowchart LR
     L --> M[FastAPI API + Web UI + Admin Console]
 ```
 
-## 0.7 检索流程图
+## Retrieval Flow
 
 ```mermaid
 flowchart TD
@@ -119,19 +118,7 @@ flowchart TD
     S --> C[Inline Citation + Source Links]
 ```
 
-## 0.8 简历写法建议
-
-如果你要把这个项目写进简历，建议重点写成“面向开发者场景的可落地智能问答产品”，而不是“做了一个 RAG Demo”。
-
-更推荐的表达方向：
-
-- 基于公开技术文档构建 developer-facing RAG QA system，支持混合检索、结构化答案和证据引用
-- 设计多 provider LLM generation layer，兼容 OpenAI、Claude、DeepSeek、Groq、OpenRouter、Together、Qwen、Mistral、Perplexity 等主流模型接入
-- 实现官方文档抓取、增量同步、局部索引重建、自动评测和 API/Web UI 闭环，具备真实产品化扩展基础
-
-可直接复用的简历表达见：[简历描述模板](docs/resume-project-writeup.md)
-
-## 1. 项目说明
+## Project Scope
 
 这个项目不是泛聊天机器人，而是一个更适合真实落地的开发者文档问答系统。
 
@@ -149,7 +136,7 @@ flowchart TD
 - 返回引用片段和原始来源链接，方便继续深挖
 - 通过 API 对外服务，便于二次集成
 
-## 1.1 演示问答示例
+## Example Query
 
 输入问题：
 
@@ -605,9 +592,9 @@ curl -X POST http://127.0.0.1:8000/api/v1/query \
 
 ## 8. 本地运行
 
-### 8.0 3 分钟 Demo 路径
+### 8.0 轻量启动路径
 
-如果你只是为了面试或简历展示，推荐优先走这条最短路径：
+如果你想先跑一个轻量、稳定的版本，推荐优先走这条最短路径：
 
 ```bash
 python3.11 -m venv .venv
@@ -624,7 +611,7 @@ uvicorn app.main:app --reload
 - `http://127.0.0.1:8000/`
 - `http://127.0.0.1:8000/docs`
 
-这条路径不依赖任何模型 key，最适合稳定演示 citation、检索结果、知识库结构和 Web UI。
+这条路径不依赖任何模型 key，适合先验证 citation、检索结果、知识库结构和 Web UI。
 
 ### 8.1 安装依赖
 
@@ -700,7 +687,7 @@ uvicorn app.main:app --reload
 - Web 页面：`http://127.0.0.1:8000/`
 - OpenAPI 文档：`http://127.0.0.1:8000/docs`
 
-如果你是为了简历展示，推荐优先使用这条本地运行方式，最稳定也最容易控制演示效果。
+如果你优先关注稳定性，推荐优先使用这条本地运行方式。
 
 ### 8.3.1 Docker 运行
 
@@ -715,7 +702,7 @@ docker compose up --build
 - `RAG_ENABLE_EMBEDDINGS=0`
 - `RAG_ENABLE_RERANKER=0`
 
-这样可以避免容器首次构建时拉取 `torch` 与 `sentence-transformers` 的大体积依赖，更适合演示、简历项目和轻量部署。
+这样可以避免容器首次构建时拉取 `torch` 与 `sentence-transformers` 的大体积依赖，更适合轻量部署和快速验证。
 
 完整模型模式：
 
@@ -913,5 +900,4 @@ export RAG_EXTRA_LLM_PROVIDERS_JSON='[
 
 - [产品说明](docs/developer-docs-product.md)
 - [Demo Checklist](docs/demo-checklist.md)
-- [简历描述模板](docs/resume-project-writeup.md)
 - [实施计划](docs/rag-system-plan.md)
